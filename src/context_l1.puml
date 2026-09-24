@@ -1,0 +1,50 @@
+@startuml "context_l1.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+' ============================================================
+' ГЛОССАРИЙ ID (единый для всей команды, менять только через ТЛ)
+' Персоны:        cx_analyst, product_owner, head_of_direction, admin
+' Система:        feedback_system
+' Контейнеры:     web_panel, mobile_app, api_backend, labeling_worker,
+'                 background_worker, message_broker, database, cache
+' Внешние:        review_source, llm_service, notify_service,
+'                 reporting_system, bank_iam
+' Правила: только Rel(); без Rel_D/R/L/U; без skinparam в личных файлах;
+'          у каждой связи одно действие и протокол.
+' Описания элементов одинаковы в общей и во всех личных версиях.
+' ============================================================
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма системного контекста (L1). ИС управления обратной связью клиентов банка
+
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
+
+System(feedback_system, "ИС управления обратной связью клиентов банка", "Собирает и размечает отзывы, заводит обращения по негативу, назначает их владельцам, контролирует сроки и строит аналитику")
+
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+System_Ext(llm_service, "Сервис языковой модели", "Внешняя большая языковая модель для определения тем и тональности отзывов")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+
+Rel(cx_analyst, feedback_system, "Загружает пакеты отзывов, изучает дашборд настроений, формирует отчёты", "HTTPS")
+Rel(product_owner, feedback_system, "Берёт обращения своего направления в работу, меняет их статусы", "HTTPS")
+Rel(head_of_direction, feedback_system, "Просматривает просроченные обращения и эскалации", "HTTPS")
+Rel(admin, feedback_system, "Настраивает справочник тем, владельцев и сроков реакции", "HTTPS")
+Rel(cx_analyst, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(product_owner, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(head_of_direction, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(admin, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(feedback_system, review_source, "Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
+Rel(feedback_system, llm_service, "Передаёт текст отзыва, получает темы и тональность", "HTTPS / REST, JSON")
+Rel(feedback_system, notify_service, "Передаёт уведомления о новых обращениях и эскалациях", "SMTP / TLS, HTTPS")
+Rel(feedback_system, reporting_system, "Выгружает отчёты о закрытых обращениях и времени реакции", "HTTPS / REST, JSON")
+Rel(feedback_system, bank_iam, "Проверяет подлинность и роли сотрудников", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(notify_service, product_owner, "Сообщает о новом обращении по направлению", "SMTP / TLS, APNs / FCM")
+Rel(notify_service, head_of_direction, "Сообщает о просрочке и эскалации", "SMTP / TLS, APNs / FCM")
+
+@enduml
