@@ -1,0 +1,40 @@
+@startuml "be_context_l1.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+ 
+' Индивидуальная версия: BE, запросы через API. Глоссарий ID и правила: см. context_l1.puml тимлида
+ 
+title Диаграмма системного контекста (L1) ИС управления обратной связью клиентов банка. Фокус: операции пользователей, доступ и отчётность
+ 
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
+ 
+System(feedback_system, "ИС управления обратной связью клиентов банка", "Собирает и размечает отзывы, заводит обращения по негативу, назначает их владельцам, контролирует сроки и строит аналитику")
+ 
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+System_Ext(llm_service, "Сервис языковой модели", "Внешняя большая языковая модель для определения тем и тональности отзывов")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+ 
+' --- фокус ---
+Rel(cx_analyst, feedback_system, "Загружает пакет отзывов", "HTTPS")
+Rel(cx_analyst, feedback_system, "Формирует отчёт за период", "HTTPS")
+Rel(product_owner, feedback_system, "Получает обращения своего направления", "HTTPS")
+Rel(product_owner, feedback_system, "Переводит обращение по статусам, при отклонении указывает причину", "HTTPS")
+Rel(head_of_direction, feedback_system, "Получает просроченные и эскалированные обращения", "HTTPS")
+Rel(admin, feedback_system, "Настраивает справочник тем и владельцев", "HTTPS")
+Rel(admin, feedback_system, "Задаёт нормативные сроки реакции по темам", "HTTPS")
+Rel(feedback_system, bank_iam, "Получает открытые ключи для проверки подписи токенов", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(feedback_system, bank_iam, "Получает роли сотрудника для разграничения прав", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(feedback_system, reporting_system, "Выгружает отчёт о закрытых обращениях и времени реакции", "HTTPS / REST, JSON")
+ 
+' --- вне фокуса ---
+Rel(feedback_system, review_source, "Забирает новые отзывы", "HTTPS / REST")
+Rel(feedback_system, llm_service, "Передаёт отзывы на разметку", "HTTPS / REST")
+Rel(feedback_system, notify_service, "Передаёт уведомления", "HTTPS, SMTP / TLS")
+Rel(notify_service, product_owner, "Сообщает о новом обращении", "SMTP / TLS, APNs / FCM")
+Rel(notify_service, head_of_direction, "Сообщает об эскалации", "SMTP / TLS, APNs / FCM")
+ 
+@enduml
