@@ -1,0 +1,42 @@
+@startuml "fe_context_l1.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+' Индивидуальная версия: FE, точки входа пользователей. Глоссарий ID и правила: см. context_l1.puml тимлида
+
+title Диаграмма системного контекста (L1) ИС управления обратной связью клиентов банка. Фокус: точки входа пользователей
+
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
+
+System(feedback_system, "ИС управления обратной связью клиентов банка", "Собирает и размечает отзывы, заводит обращения по негативу, назначает их владельцам, контролирует сроки и строит аналитику")
+
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+System_Ext(llm_service, "Сервис языковой модели", "Внешняя большая языковая модель для определения тем и тональности отзывов")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+
+' --- фокус ---
+Rel(cx_analyst, feedback_system, "Загружает пакет отзывов через веб-панель", "HTTPS")
+Rel(cx_analyst, feedback_system, "Изучает дашборд настроений и формирует отчёты в веб-панели", "HTTPS")
+Rel(product_owner, feedback_system, "Берёт обращения в работу на доске веб-панели", "HTTPS")
+Rel(product_owner, feedback_system, "Меняет статус обращения из мобильного приложения", "HTTPS")
+Rel(head_of_direction, feedback_system, "Просматривает эскалации в мобильном приложении", "HTTPS")
+Rel(admin, feedback_system, "Настраивает справочники тем, владельцев и сроков в веб-панели", "HTTPS")
+Rel(cx_analyst, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(product_owner, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(head_of_direction, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(admin, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(feedback_system, bank_iam, "Проверяет токен и роль вошедшего сотрудника", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(feedback_system, notify_service, "Передаёт push и email о новых обращениях и эскалациях", "HTTPS, SMTP / TLS")
+Rel(notify_service, product_owner, "Доставляет push и email о новом обращении", "SMTP / TLS, APNs / FCM")
+Rel(notify_service, head_of_direction, "Доставляет push и email об эскалации", "SMTP / TLS, APNs / FCM")
+
+' --- вне фокуса ---
+Rel(feedback_system, review_source, "Забирает новые отзывы", "HTTPS / REST")
+Rel(feedback_system, llm_service, "Передаёт отзывы на разметку", "HTTPS / REST")
+Rel(feedback_system, reporting_system, "Выгружает отчёты", "HTTPS / REST")
+
+@enduml
