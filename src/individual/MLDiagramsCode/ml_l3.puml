@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+
+title L3 — Воркер разметки (BERT, своё обучение)
+
+Container(message_broker, "Брокер сообщений", "RabbitMQ")
+ContainerDb(database, "База данных", "PostgreSQL 16")
+
+Container_Boundary(labeling_worker, "Воркер разметки (Python / Celery, GPU)") {
+    Component(task_consumer, "Приёмник задач", "Celery")
+    Component(review_loader, "Загрузчик данных", "SQLAlchemy")
+    Component(text_preprocessor, "Подготовка текста", "HF tokenizers")
+    Component(bert_inference, "BERT-инференс", "PyTorch")
+    Component(cluster_assigner, "Назначение кластера", "scikit-learn / faiss")
+    Component(result_validator, "Валидатор разметки", "Pydantic")
+    Component(labeling_writer, "Сохранение разметки", "SQLAlchemy")
+    Component(case_rule_engine, "Правила обращений", "Python")
+}
+
+Rel(message_broker, task_consumer, "1. задача", "AMQP")
+Rel(task_consumer, review_loader, "2. id отзыва")
+Rel(review_loader, database, "3. текст, справочник", "SQL")
+Rel(review_loader, text_preprocessor, "4. текст + темы")
+Rel(text_preprocessor, bert_inference, "5. батч")
+Rel(bert_inference, cluster_assigner, "6. эмбеддинг")
+Rel(bert_inference, result_validator, "7. вероятности")
+Rel(cluster_assigner, result_validator, "8. кластер")
+Rel(result_validator, labeling_writer, "9. разметка")
+Rel(labeling_writer, database, "10. запись", "SQL")
+Rel(labeling_writer, case_rule_engine, "11. результат")
+Rel(case_rule_engine, database, "12. обращение", "SQL")
+Rel(case_rule_engine, message_broker, "13. cases.events", "AMQP")
+Rel(case_rule_engine, task_consumer, "14. ack")
+@enduml
