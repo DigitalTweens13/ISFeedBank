@@ -1,0 +1,50 @@
+@startuml "fe_components_l3.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+' Индивидуальная версия: L3, контейнер «Мобильное приложение». Глоссарий ID и правила: см. context_l1.puml тимлида
+' Слои: представление (mob_navigator, mob_*_screen) -> прикладной (mob_query, mob_push) -> инфраструктура (mob_api_client, mob_auth); push приходит извне, поэтому mob_push вызывает навигатор
+' Мобильное приложение — публичный OAuth-клиент: вход во внешнем браузере ОС с PKCE (RFC 8252), токены в Keychain / Keystore
+' Push: на Android через RuStore Universal Push (доставка RuStore / FCM / HMS), на iOS через APNs
+' Связи внутри контейнера: вызовы функций в одном процессе приложения, сетевые протоколы только у связей наружу
+
+title Диаграмма компонентов (L3) ИС управления обратной связью клиентов банка. Контейнер: Мобильное приложение
+
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+
+Container_Boundary(mobile_app, "Мобильное приложение") {
+    Component(mob_cases_screen, "Экран списка обращений", "React Native", "Обращения направления для владельца продукта, эскалации и просрочки для руководителя")
+    Component(mob_case_screen, "Экран карточки обращения", "React Native", "Текст отзыва, темы, срок реакции, история статусов, смена статуса с причиной отклонения")
+    Component(mob_navigator, "Навигатор", "React Navigation", "Стеки экранов, доступ по ролям, переход по ссылке из уведомления")
+    Component(mob_push, "Обработчик уведомлений", "RuStore Universal Push SDK, APNs", "Получение push-токена устройства (Android: RuStore / FCM / HMS, iOS: APNs), приём уведомлений и открытие нужного обращения")
+    Component(mob_query, "Слой серверного состояния", "TanStack Query", "Кэш ответов API, очередь смены статусов при отсутствии сети и её отправка после восстановления")
+    Component(mob_api_client, "Клиент Backend API", "TypeScript, типы из OpenAPI", "Типизированные методы REST API, заголовок авторизации, обработка ошибок")
+    Component(mob_auth, "Модуль входа", "react-native-app-auth, Keychain / Keystore", "Вход через единый вход банка во внешнем браузере ОС (Authorization Code + PKCE, RFC 8252), хранение токенов в защищённом хранилище ОС")
+}
+
+Rel(head_of_direction, mob_cases_screen, "Просматривает эскалации", "HTTPS")
+Rel(product_owner, mob_case_screen, "Меняет статусы обращений вне рабочего места", "HTTPS")
+Rel(notify_service, mob_push, "Доставляет push-уведомления об обращениях и эскалациях", "APNs / FCM")
+
+Rel(mob_push, mob_navigator, "Открывает карточку обращения из уведомления", "вызов функции TypeScript")
+Rel(mob_push, mob_api_client, "Передаёт токен устройства для адресной отправки push", "вызов функции TypeScript")
+Rel(mob_navigator, mob_auth, "Проверяет вход и роль пользователя перед открытием экрана", "вызов функции TypeScript")
+Rel(mob_navigator, mob_cases_screen, "Открывает список обращений по роли пользователя", "вызов функции TypeScript")
+Rel(mob_navigator, mob_case_screen, "Открывает карточку выбранного обращения", "вызов функции TypeScript")
+
+Rel(mob_cases_screen, mob_query, "Получает список обращений направления или эскалаций", "вызов функции TypeScript")
+Rel(mob_case_screen, mob_query, "Получает карточку обращения и передаёт смену статуса", "вызов функции TypeScript")
+Rel(mob_query, mob_api_client, "Выполняет запросы и изменения через методы REST API", "вызов функции TypeScript")
+Rel(mob_api_client, mob_auth, "Получает действующий токен доступа для заголовка Authorization", "вызов функции TypeScript")
+
+Rel(mob_auth, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(mob_auth, bank_iam, "Обменивает код авторизации на токены и обновляет их", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(mob_api_client, api_backend, "Запрашивает список и карточку обращения", "HTTPS / JSON, REST")
+Rel(mob_api_client, api_backend, "Передаёт смену статуса обращения", "HTTPS / JSON, REST")
+Rel(mob_api_client, api_backend, "Регистрирует токен устройства для push-уведомлений", "HTTPS / JSON, REST")
+
+@enduml
