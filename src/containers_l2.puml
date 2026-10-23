@@ -7,7 +7,7 @@
 ' Система:        feedback_system
 ' Контейнеры:     web_panel, mobile_app, api_backend, labeling_worker,
 '                 background_worker, message_broker, database, cache
-' Внешние:        review_source, llm_service, notify_service,
+' Внешние:        review_source, notify_service,
 '                 reporting_system, bank_iam
 ' Правила: только Rel(); без Rel_D/R/L/U; без skinparam в личных файлах;
 '          у каждой связи одно действие и протокол.
@@ -26,7 +26,6 @@ Person(head_of_direction, "Руководитель направления", "К
 Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
 
 System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
-System_Ext(llm_service, "Сервис языковой модели", "Внешняя большая языковая модель для определения тем и тональности отзывов")
 System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
 System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
 System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
@@ -57,7 +56,6 @@ Rel(api_backend, cache, "Получает и обновляет агрегаты
 Rel(api_backend, message_broker, "Ставит задачи разметки для загруженного пакета отзывов", "AMQP")
 Rel(api_backend, reporting_system, "Выгружает отчёты за период", "HTTPS / REST, JSON")
 Rel(labeling_worker, message_broker, "Забирает задачи разметки из очереди reviews.labeling", "AMQP")
-Rel(labeling_worker, llm_service, "Передаёт текст отзыва, получает темы и тональность", "HTTPS / REST, JSON")
 Rel(labeling_worker, database, "Сохраняет результаты разметки", "SQL / TCP")
 Rel(labeling_worker, database, "Заводит обращение при негативе по значимой теме", "SQL / TCP")
 Rel(labeling_worker, message_broker, "Публикует событие «обращение создано» в очередь cases.events", "AMQP")

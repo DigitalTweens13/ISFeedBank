@@ -26,7 +26,6 @@ Person(admin, "Администратор системы", "Ведёт спра�
 System(feedback_system, "ИС управления обратной связью клиентов банка", "Собирает и размечает отзывы, заводит обращения по негативу, назначает их владельцам, контролирует сроки и строит аналитику")
 
 System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
-System_Ext(llm_service, "Сервис языковой модели", "Внешняя большая языковая модель для определения тем и тональности отзывов")
 System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
 System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
 System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
@@ -40,7 +39,6 @@ Rel(product_owner, bank_iam, "Входит через единый вход ба
 Rel(head_of_direction, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
 Rel(admin, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
 Rel(feedback_system, review_source, "Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
-Rel(feedback_system, llm_service, "Передаёт текст отзыва, получает темы и тональность", "HTTPS / REST, JSON")
 Rel(feedback_system, notify_service, "Передаёт уведомления о новых обращениях и эскалациях", "SMTP / TLS, HTTPS")
 Rel(feedback_system, reporting_system, "Выгружает отчёты о закрытых обращениях и времени реакции", "HTTPS / REST, JSON")
 Rel(feedback_system, bank_iam, "Проверяет подлинность и роли сотрудников", "HTTPS / OAuth 2.0 (OIDC)")
