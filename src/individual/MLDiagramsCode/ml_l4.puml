@@ -1,0 +1,101 @@
+@startuml "ml_l4.puml"
+' L4 — диаграмма классов компонента cluster_assigner (Назначение кластера) воркера разметки.
+' Код прототипа: src/individual/MLCode/cluster_assigner
+
+left to right direction
+
+title L4 — Назначение кластера (паттерн «Стратегия»)
+
+package cluster_assigner {
+
+    class ClusterAssigner <<context>> {
+        - _strategy: ClusterAssignmentStrategy
+        - _catalog: ClusterCatalog
+        - _min_similarity: float
+        + __init__(strategy: ClusterAssignmentStrategy, catalog: ClusterCatalog, min_similarity: float = 0.5)
+        + strategy: ClusterAssignmentStrategy {readOnly}
+        + set_strategy(strategy: ClusterAssignmentStrategy): None
+        + assign(embeddings: Matrix): list[ClusterAssignment]
+        - _to_assignment(cluster_id: int, score: float): ClusterAssignment
+    }
+
+    abstract class ClusterAssignmentStrategy <<interface>> {
+        + name: str
+        + {abstract} assign(embeddings: Matrix): list[ClusterMatch]
+    }
+
+    class CosineCentroidStrategy {
+        + name = "cosine_centroid"
+        - _ids: NDArray[int64]
+        - _centroids: Matrix
+        + __init__(catalog: ClusterCatalog)
+        + assign(embeddings: Matrix): list[ClusterMatch]
+    }
+
+    class KnnVotingStrategy {
+        + name = "knn_voting"
+        - _vectors: Matrix
+        - _labels: NDArray[int64]
+        - _k: int
+        + __init__(reference: ReferenceSet, k: int = 5)
+        + assign(embeddings: Matrix): list[ClusterMatch]
+        - _vote(similarity_row: Matrix, neighbour_idx: NDArray[intp]): ClusterMatch
+    }
+
+    class FaissCentroidStrategy {
+        + name = "faiss_centroid"
+        - _ids: NDArray[int64]
+        - _index: faiss.IndexFlatIP
+        + __init__(catalog: ClusterCatalog)
+        + assign(embeddings: Matrix): list[ClusterMatch]
+    }
+
+    class StrategyRegistry {
+        - _factories: dict[str, StrategyFactory]
+        + register(name: str, factory: StrategyFactory): None
+        + create(name: str): ClusterAssignmentStrategy
+        + names(): list[str]
+    }
+
+    class ClusterCatalog <<dataclass, frozen>> {
+        + cluster_ids: tuple[int, ...]
+        + names: tuple[str, ...]
+        + centroids: Matrix
+        + dim: int {readOnly}
+        + name_of(cluster_id: int): str
+    }
+
+    class ReferenceSet <<dataclass, frozen>> {
+        + embeddings: Matrix
+        + cluster_ids: NDArray[int64]
+    }
+
+    class ClusterMatch <<dataclass, frozen>> {
+        + cluster_id: int
+        + score: float
+    }
+
+    class ClusterAssignment <<dataclass, frozen>> {
+        + cluster_id: int | None
+        + cluster_name: str | None
+        + score: float
+        + strategy: str
+        + is_outlier: bool
+    }
+}
+
+ClusterAssigner o--> "1" ClusterAssignmentStrategy : делегирует поиск >
+ClusterAssigner --> "1" ClusterCatalog : названия, размерность >
+ClusterAssigner ..> ClusterAssignment : <<create>>
+
+CosineCentroidStrategy ..|> ClusterAssignmentStrategy
+KnnVotingStrategy ..|> ClusterAssignmentStrategy
+FaissCentroidStrategy ..|> ClusterAssignmentStrategy
+
+CosineCentroidStrategy ..> ClusterCatalog : читает центроиды
+FaissCentroidStrategy ..> ClusterCatalog : строит индекс
+KnnVotingStrategy ..> ReferenceSet : читает эталоны
+
+ClusterAssignmentStrategy ..> ClusterMatch : <<create>>
+StrategyRegistry ..> ClusterAssignmentStrategy : <<create>>
+@enduml
