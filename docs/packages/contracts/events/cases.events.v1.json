@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://isfeedbank.local/events/cases.events.v1.json",
+  "title": "CasesEventV1",
+  "description": "Событие по обращению. Публикуется Воркером разметки при заведении обращения, читается Воркером фоновых задач из очереди cases.events.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_type", "case_id", "review_id", "occurred_at"],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": ["case_created", "case_escalated", "case_closed"],
+      "description": "Тип события. На текущем этапе Воркер разметки публикует только case_created."
+    },
+    "case_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Идентификатор обращения."
+    },
+    "review_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Идентификатор отзыва, из которого создано обращение."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Момент события."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "Важность обращения. Используется политикой приоритета CriticalCasesFirst в брокере."
+    },
+    "direction": {
+      "type": "string",
+      "description": "Продуктовое направление: ипотека, карты, приложение, отделения."
+    }
+  }
+}

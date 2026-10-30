@@ -1,0 +1,100 @@
+id;name;kind;container;container_id;layer;stereotype;purpose;l4_classes;status;source_report;notes
+api_auth_comp;Модуль авторизации;L3-компонент;Backend API;api_backend;component;component;Проверяет подпись и срок JWT по ключам IAM, получает роли и определяет доступность операции;pydantic:SessionDto, pydantic:Role;готово;BE_lab2_report_Backend_API.docx;Остальные компоненты вызывают перед обработкой запроса
+api_feedback_ingestion_comp;Приём и валидация отзывов;L3-компонент;Backend API;api_backend;component;component;Принимает пакет, проверяет формат, обезличивает, сохраняет и ставит задачи разметки;pydantic:ReviewBatch, pydantic:RawReview, pydantic:BatchReport;готово;BE_lab2_report_Backend_API.docx;Паттерн Стратегия, 4 точки вариативности
+api_analytics_comp;Модуль выдачи аналитики;L3-компонент;Backend API;api_backend;component;component;Дашборд, реестры, справочники и выгрузка отчётов;pydantic:DashboardDto, pydantic:ReportDto, pydantic:Period, pydantic:Topic, pydantic:Sentiment;готово;BE_lab2_report_Backend_API.docx;Кэш только у аналитики
+api_response_management_comp;Управление ответами и статусами;L3-компонент;Backend API;api_backend;component;component;Статусная модель, история статусов, назначение владельцев;pydantic:CaseDto, pydantic:CaseDetailsDto, pydantic:StatusChange, pydantic:StatusChangeRecord, pydantic:CaseStatus;готово;BE_lab2_report_Backend_API.docx;Смена статуса и история одной транзакцией
+api_web_panel_port;Порт веб-панели;L3-порт;Backend API;api_backend;port;interface;REST-контракт для веб-панели;;готово;BE_lab2_report_Backend_API.docx;Стык с web_panel
+api_mobile_app_port;Порт мобильного приложения;L3-порт;Backend API;api_backend;port;interface;REST-контракт для мобильного приложения;;готово;BE_lab2_report_Backend_API.docx;Стык с mobile_app
+api_iam_port;Порт IAM;L3-порт;Backend API;api_backend;port;interface;OIDC-обмен, открытые ключи, роли;;готово;BE_lab2_report_Backend_API.docx;Стык с bank_iam
+api_reporting_port;Порт системы отчётности;L3-порт;Backend API;api_backend;port;interface;Выгрузка отчётов в reporting_system;;готово;BE_lab2_report_Backend_API.docx;Стык с reporting_system
+api_batch_parser_strategy;Стратегия разбора пакета;L4-интерфейс;Backend API;api_backend;code;interface;Абстракция парсера пакета;;готово;BE_lab3_report_Backend_API.docx;Реализации подменяются в StrategySlot
+api_validation_strategy;Стратегия валидации;L4-интерфейс;Backend API;api_backend;code;interface;Абстракция валидатора записи;;готово;BE_lab3_report_Backend_API.docx;Цепочка собирает все нарушения
+api_anonymization_strategy;Стратегия обезличивания;L4-интерфейс;Backend API;api_backend;code;interface;Абстракция обезличивания текста;;готово;BE_lab3_report_Backend_API.docx;Обезличивание до сохранения
+api_deduplication_strategy;Стратегия поиска дублей;L4-интерфейс;Backend API;api_backend;code;interface;Абстракция поиска дублей;;готово;BE_lab3_report_Backend_API.docx;ExternalId с откатом на содержимое
+api_strategy_slot;Слот стратегий;L4-вспомогательный класс;Backend API;api_backend;code;class;Хранит реализации одного интерфейса и активную стратегию;;готово;BE_lab3_report_Backend_API.docx;Вынесен в shared
+api_batch_report;Отчёт о пакете;L4-DTO;Backend API;api_backend;code;dataclass;Итог обработки пакета;pydantic:BatchReport;готово;BE_lab3_report_Backend_API.docx;accepted, rejected, warnings
+api_feedback_dto;Отзыв;L4-DTO;Backend API;api_backend;code;dataclass;Принятый обезличенный отзыв;pydantic:RawReview;готово;BE_lab3_report_Backend_API.docx;Автор не хранится
+api_case_dto;Обращение;L4-DTO;Backend API;api_backend;code;dataclass;Карточка обращения;pydantic:CaseDto, typescript:CaseDto;готово;BE_lab2_report_Backend_API.docx;Используется в контрактах
+api_dashboard_dto;Агрегаты дашборда;L4-DTO;Backend API;api_backend;code;dataclass;Доли тональности и динамика;pydantic:DashboardDto, typescript:DashboardDto;готово;BE_lab2_report_Backend_API.docx;Источник для кэша
+api_status_transition_rule;Правило перехода статуса;L4-класс;Backend API;api_backend;code;class;Допустимость перехода и причина отклонения;pydantic:StatusChange, pydantic:CaseStatus;готово;BE_lab2_report_Backend_API.docx;strict_no_reopen как стратегия
+api_session_endpoint;Эндпоинт сессии;L3-компонент;Backend API;api_backend;component;component;GET /session/me — профиль и роли текущей сессии;pydantic:SessionDto;готово;DA_Malakhova_lab3_report.docx;
+api_device_registration_endpoint;Эндпоинт регистрации устройств;L3-компонент;Backend API;api_backend;component;component;POST /devices — регистрация push-токена;pydantic:DeviceRegistration;готово;FE_Kulbyakina_lab2_report.docx;
+api_strategy_switch_endpoint;Эндпоинт переключения стратегий;L3-компонент;Backend API;api_backend;component;component;PUT /admin/strategies — переключение активной стратегии;pydantic:StrategySwitch;готово;BE_lab3_report_Backend_API.docx;
+mq_connection_handler;Обработчик AMQP-соединений;L3-компонент;Брокер сообщений;message_broker;component;component;Соединения, публикация с подтверждением, ack, переподключение;;готово;DQ_lab2_report_Message_Broker.docx;pika
+mq_exchange_manager;Маршрутизатор сообщений;L3-компонент;Брокер сообщений;message_broker;component;component;Объявление обменов и привязок, выбор ключа маршрутизации;;готово;DQ_lab2_report_Message_Broker.docx;feedback.direct, feedback.topic
+mq_queue_labeling;Очередь задач разметки;L3-компонент;Брокер сообщений;message_broker;component;component;Очередь reviews.labeling;pydantic:ReviewsLabelingTaskV1, typescript:ReviewsLabelingTaskV1;готово;DQ_lab2_report_Message_Broker.docx;Лимит 10000
+mq_queue_cases;Очередь событий обращений;L3-компонент;Брокер сообщений;message_broker;component;component;Очередь cases.events;pydantic:CasesEventV1, typescript:CasesEventV1;готово;DQ_lab2_report_Message_Broker.docx;Событие обращение создано
+mq_queue_base;Базовый контекст очереди;L4-класс;Брокер сообщений;message_broker;code;class;Стратегии очереди, prepare(), declare();;готово;DQ_lab3_report_Message_Broker.docx;set_order_strategy()
+mq_delivery_order_strategy;Стратегия порядка выдачи;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Расчёт приоритета priority_for();;готово;DQ_lab3_report_Message_Broker.docx;Подмена на лету
+mq_priority_policy;Политика приоритета;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Расчёт приоритета priority_of();pydantic:Severity;готово;DQ_lab3_report_Message_Broker.docx;Вложена в PriorityOrder
+mq_overflow_strategy;Стратегия переполнения;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Поведение при переполнении очереди;;готово;DQ_lab3_report_Message_Broker.docx;x-overflow
+mq_ack_strategy;Стратегия подтверждения;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Когда подтверждать доставку;;готово;DQ_lab3_report_Message_Broker.docx;Идемпотентность обработчиков
+mq_retry_strategy;Стратегия переподключения;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Поведение при обрыве связи;;готово;DQ_lab3_report_Message_Broker.docx;
+mq_credentials_strategy;Стратегия доступа;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Источник логина и пароля;;готово;DQ_lab3_report_Message_Broker.docx;
+mq_routing_strategy;Стратегия маршрутизации;L4-интерфейс;Брокер сообщений;message_broker;code;interface;Тип обмена и ключ;;готово;DQ_lab3_report_Message_Broker.docx;
+mq_labeling_task_validation;Валидация задачи разметки;L4-класс;Брокер сообщений;message_broker;code;class;Проверка формата задачи;pydantic:ReviewsLabelingTaskV1;готово;DQ_lab3_report_Message_Broker.docx;review_id, text, source
+mq_case_event_validation;Валидация события обращения;L4-класс;Брокер сообщений;message_broker;code;class;Проверка формата события;pydantic:CasesEventV1;готово;DQ_lab3_report_Message_Broker.docx;event_type, case_id, review_id
+lw_task_consumer;Приёмник задач;L3-компонент;Воркер разметки;labeling_worker;component;component;Забирает задачи и подтверждает брокеру;pydantic:ReviewsLabelingTaskV1;готово;ML_Ershov_lab2_report.docx;Celery
+lw_review_loader;Загрузчик данных;L3-компонент;Воркер разметки;labeling_worker;component;component;Читает отзыв и справочник тем;;готово;ML_Ershov_lab2_report.docx;SQLAlchemy
+lw_text_preprocessor;Подготовка текста;L3-компонент;Воркер разметки;labeling_worker;component;component;Токенизация и батч;;готово;ML_Ershov_lab2_report.docx;HF tokenizers
+lw_bert_inference;BERT-инференс;L3-компонент;Воркер разметки;labeling_worker;component;component;Эмбеддинги и вероятности тем и тональности;;готово;ML_Ershov_lab2_report.docx;PyTorch, GPU
+lw_cluster_assigner;Назначение кластера;L3-компонент;Воркер разметки;labeling_worker;component;component;Ближайший кластер по эмбеддингу;;готово;ML_Ershov_lab2_report.docx;L4 в ML_Ershov_lab3_report.docx
+lw_result_validator;Валидатор разметки;L3-компонент;Воркер разметки;labeling_worker;component;component;Проверка разметки по схеме;;готово;ML_Ershov_lab2_report.docx;Pydantic
+lw_labeling_writer;Сохранение разметки;L3-компонент;Воркер разметки;labeling_worker;component;component;Запись проверенной разметки;;готово;ML_Ershov_lab2_report.docx;Замена прежней разметки
+lw_case_rule_engine;Правила обращений;L3-компонент;Воркер разметки;labeling_worker;component;component;Заводит обращение и публикует событие;pydantic:CasesEventV1;готово;ML_Ershov_lab2_report.docx;Негатив по значимой теме
+lw_cluster_catalog;Справочник кластеров;L4-DTO;Воркер разметки;labeling_worker;code;dataclass frozen;Идентификаторы, названия, центроиды;;готово;ML_Ershov_lab3_report.docx;
+lw_reference_set;Эталонный набор;L4-DTO;Воркер разметки;labeling_worker;code;dataclass frozen;Эмбеддинги с известным кластером;;готово;ML_Ershov_lab3_report.docx;Для k-NN
+lw_cluster_match;Ответ стратегии;L4-DTO;Воркер разметки;labeling_worker;code;dataclass frozen;cluster_id и косинусная близость;;готово;ML_Ershov_lab3_report.docx;score в [-1, 1]
+lw_cluster_assignment;Итог назначения;L4-DTO;Воркер разметки;labeling_worker;code;dataclass frozen;Кластер, название, оценка, признак выброса;;готово;ML_Ershov_lab3_report.docx;Передаётся валидатору
+lw_llm_port;Порт внешней LLM;L3-порт;Воркер разметки;labeling_worker;port;interface;Вызов llm_service;;готово;BE_Daev_lab1_report.docx;Только для версии ЛР1
+lw_dedup_guard;Защита от повторной обработки;L4-класс;Воркер разметки;labeling_worker;code;class;Идемпотентность при повторной доставке;;план;—;Нужно для L4
+lw_gpu_runtime;GPU-рантайм;L4-класс;Воркер разметки;labeling_worker;code;class;Загрузка весов и батчинг;;план;—;Нужно для L4
+lw_strategy_factory;Фабрика стратегий;L4-класс;Воркер разметки;labeling_worker;code;class;Создание стратегии по имени;;план;—;Нужно для L4
+bg_scheduler_comp;Планировщик заданий;L3-компонент;Воркер фоновых задач;background_worker;component;component;Расписания сбора отзывов и проверки сроков;;план;—;Celery beat, L3 в разработке
+bg_collector_comp;Сборщик отзывов;L3-компонент;Воркер фоновых задач;background_worker;component;component;Забор отзывов из источника по расписанию;pydantic:ReviewsLabelingTaskV1;план;—;L3 в разработке; публикует задачи разметки
+bg_deadline_monitor_comp;Контроль сроков;L3-компонент;Воркер фоновых задач;background_worker;component;component;Выбор обращений с истекающим сроком;;план;—;L3 в разработке
+bg_escalation_comp;Эскалация просрочки;L3-компонент;Воркер фоновых задач;background_worker;component;component;Фиксация эскалации и передача руководителю;;план;—;L3 в разработке
+bg_notification_comp;Рассылка уведомлений;L3-компонент;Воркер фоновых задач;background_worker;component;component;Email и push через сервис уведомлений;;план;—;L3 в разработке
+bg_case_event_consumer;Потребитель событий обращений;L3-компонент;Воркер фоновых задач;background_worker;component;component;Читает cases.events;pydantic:CasesEventV1;план;—;L3 в разработке
+bg_labeling_publisher;Публикатор задач разметки;L3-компонент;Воркер фоновых задач;background_worker;component;component;Ставит задачи по собранным отзывам;pydantic:ReviewsLabelingTaskV1;план;—;L3 в разработке
+bg_sla_calculator;Расчёт контрольного срока;L4-класс;Воркер фоновых задач;background_worker;code;class;Срок из справочника тем и рабочих дней;;план;—;Нужно для L4
+bg_sla_strategy;Стратегия расчёта SLA;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Алгоритм расчёта срока;;план;—;Согласовано с response_management
+bg_owner_assignment_strategy;Стратегия назначения владельца;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Выбор владельца обращения;;план;—;Согласовано с BE_lab3
+bg_channel_strategy;Стратегия канала уведомлений;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Канал доставки;;план;—;Нужно для L4
+bg_notify_port;Порт сервиса уведомлений;L3-порт;Воркер фоновых задач;background_worker;port;interface;Адаптер notify_service;;план;—;Стык с notify_service
+bg_review_source_port;Порт источника отзывов;L3-порт;Воркер фоновых задач;background_worker;port;interface;Адаптер review_source;;план;—;Стык с review_source
+web_analytics_view;Экран аналитики;L3-компонент;Веб-панель;web_panel;component;component;Дашборд и отчёт за период;typescript:DashboardDto, typescript:ReportDto, typescript:Period;готово;DA_Malakhova_lab2_report.docx;React, ECharts
+web_upload_view;Экран загрузки пакета;L3-компонент;Веб-панель;web_panel;component;component;Разбор файла в браузере и статус;typescript:ReviewBatch, typescript:RawReview, typescript:BatchReport, typescript:BatchStatusDto;готово;DA_Malakhova_lab2_report.docx;React, Papa Parse
+web_cases_board;Доска обращений;L3-компонент;Веб-панель;web_panel;component;component;Статусы, взятие в работу, причина отклонения;typescript:CaseDto, typescript:CaseDetailsDto, typescript:StatusChange, typescript:CaseStatus;готово;DA_Malakhova_lab2_report.docx;
+web_dictionaries_view;Экран справочников;L3-компонент;Веб-панель;web_panel;component;component;Справочники тем, владельцев и сроков;typescript:DictionaryEntryDto;готово;DA_Malakhova_lab2_report.docx;
+web_router;Маршрутизатор;L3-компонент;Веб-панель;web_panel;component;component;Маршруты и доступ по ролям;;готово;DA_Malakhova_lab2_report.docx;React Router
+web_query;Слой серверного состояния;L3-компонент;Веб-панель;web_panel;component;component;Кэш, повтор, опрос статуса пакета;;готово;DA_Malakhova_lab2_report.docx;TanStack Query
+web_api_client;Клиент Backend API;L3-компонент;Веб-панель;web_panel;component;component;Типизированные REST-вызовы, cookie и CSRF;typescript:CaseDto, typescript:ReviewBatch, typescript:DashboardDto;готово;DA_Malakhova_lab2_report.docx;Типы из @isfeedbank/contracts
+web_session;Модуль сессии;L3-компонент;Веб-панель;web_panel;component;component;BFF-сессия, запуск входа, роли;typescript:SessionDto, typescript:Role;готово;DA_Malakhova_lab2_report.docx;HttpOnly cookie
+web_error_boundary;Обработчик ошибок UI;L4-класс;Веб-панель;web_panel;code;class;Обработка 401/403 и повтор входа;;план;—;Нужно для L4
+web_notification_toast;Всплывающие уведомления;L4-класс;Веб-панель;web_panel;code;class;Сообщения об ошибках и успехе операций;;план;—;Нужно для L4
+web_analytics_view_model;Модель представления дашборда;L4-класс;Веб-панель;web_panel;code;class;Формирование рядов для ECharts;;план;—;Нужно для L4
+web_upload_validation;Клиентская валидация пакета;L4-класс;Веб-панель;web_panel;code;class;Проверка полей и кодировки до отправки;;план;—;Нужно для L4
+mob_cases_screen;Экран списка обращений;L3-компонент;Мобильное приложение;mobile_app;component;component;Обращения направления и эскалации;typescript:CaseDto;готово;FE_Kulbyakina_lab2_report.docx;React Native
+mob_case_screen;Экран карточки обращения;L3-компонент;Мобильное приложение;mobile_app;component;component;История статусов и смена статуса;typescript:CaseDetailsDto, typescript:StatusChange, typescript:StatusChangeRecord;готово;FE_Kulbyakina_lab2_report.docx;
+mob_navigator;Навигатор;L3-компонент;Мобильное приложение;mobile_app;component;component;Стеки, роли, переход по ссылке из уведомления;;готово;FE_Kulbyakina_lab2_report.docx;React Navigation
+mob_push;Обработчик уведомлений;L3-компонент;Мобильное приложение;mobile_app;component;component;Push-токен и открытие обращения;typescript:DeviceRegistration;готово;FE_Kulbyakina_lab2_report.docx;RuStore, APNs
+mob_query;Слой серверного состояния;L3-компонент;Мобильное приложение;mobile_app;component;component;Кэш и очередь смен статусов без сети;;готово;FE_Kulbyakina_lab2_report.docx;TanStack Query
+mob_api_client;Клиент Backend API;L3-компонент;Мобильное приложение;mobile_app;component;component;REST-вызовы и заголовок авторизации;typescript:CaseDto, typescript:StatusChange, typescript:DeviceRegistration;готово;FE_Kulbyakina_lab2_report.docx;Типы из @isfeedbank/contracts
+mob_auth;Модуль входа;L3-компонент;Мобильное приложение;mobile_app;component;component;OIDC + PKCE, токены в Keychain/Keystore;typescript:SessionDto, typescript:Role;готово;FE_Kulbyakina_lab2_report.docx;RFC 8252
+mob_offline_sync;Синхронизация офлайн-изменений;L4-класс;Мобильное приложение;mobile_app;code;class;Отправка очереди после восстановления сети;;план;—;Нужно для L4
+mob_conflict_handler;Обработчик конфликтов версий;L4-класс;Мобильное приложение;mobile_app;code;class;409/412 и обновление карточки;;план;—;Нужно для L4
+mob_notification_badge;Счётчик непрочитанных;L4-класс;Мобильное приложение;mobile_app;code;class;Бейджи эскалаций;;план;—;Нужно для L4
+mob_session_guard;Проверка сессии;L4-класс;Мобильное приложение;mobile_app;code;class;Молчаливое обновление токена;;план;—;Нужно для L4
+mob_deep_link_handler;Обработчик deep-link;L4-класс;Мобильное приложение;mobile_app;code;class;Переход из push и email;;план;—;Нужно для L4
+shared_strategy_slot;Слот стратегий (ядро);L4-класс;shared;shared;code;class;Универсальный контейнер стратегий;;готово;BE_lab3_report_Backend_API.docx;Используется всеми модулями
+shared_strategy_catalog;Каталог стратегий;L4-класс;shared;shared;code;class;Реестр фабрик по имени;;готово;BE_lab3_report_Backend_API.docx;
+shared_roles;Модель ролей;L4-DTO;shared;shared;code;dataclass;Роли и операции;pydantic:Role, typescript:Role;готово;BE_lab3_report_Backend_API.docx;
+shared_exceptions;Исключения домена;L4-класс;shared;shared;code;class;AccessDenied, Conflict, ValidationError;;готово;BE_lab3_report_Backend_API.docx;
+shared_clock;Часы;L4-порт;shared;shared;port;interface;Системное и тестовое время;;готово;BE_lab3_report_Backend_API.docx;
+shared_contracts_pydantic;Pydantic-контракты;сквозной пакет;shared;shared;contract;package;Схемы сообщений и API, стык Python;;готово;BE_lab3_report_Backend_API.docx;Совместно с BE
+shared_contracts_typescript;TypeScript-типы;сквозной пакет;shared;shared;contract;package;Стык Python → TS;;готово;FE_Kulbyakina_lab2_report.docx;Совместно с FE
+shared_openapi_spec;OpenAPI-спецификация;сквозной артефакт;shared;shared;contract;artifact;Единый контракт REST;;готово;DA_Malakhova_lab3_report.docx;Файл openapi/api.v1.yaml
+shared_events_contract;Контракт событий брокера;сквозной артефакт;shared;shared;contract;artifact;Схемы reviews.labeling и cases.events;pydantic:CasesEventV1, pydantic:ReviewsLabelingTaskV1, typescript:CasesEventV1, typescript:ReviewsLabelingTaskV1;готово;DQ_lab2_report_Message_Broker.docx;JSON Schema в events/
+shared_observability;Логи, метрики, trace-id;L4-порт;shared;shared;port;interface;Сквозная трассировка между контейнерами;;план;—;Нужно для аудита PR
+shared_config;Конфигурация окружений;L4-класс;shared;shared;code;class;Согласованные параметры подключений;;план;—;

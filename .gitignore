@@ -13,3 +13,14 @@ dist/
 # Временные файлы Microsoft Office
 ~$*
 *.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Временные файлы генератора
+docs/packages/contracts/pydantic/_*_tmp.py
+
+# Локальные окружения
+.venv/
+venv/

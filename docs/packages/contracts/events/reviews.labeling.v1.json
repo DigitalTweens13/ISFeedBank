@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://isfeedbank.local/events/reviews.labeling.v1.json",
+  "title": "ReviewsLabelingTaskV1",
+  "description": "Задача разметки одного отзыва. Публикуется Backend API и Воркером фоновых задач, читается Воркером разметки из очереди reviews.labeling.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["review_id", "text", "source", "rating", "published_at"],
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Идентификатор отзыва в базе данных."
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000,
+      "description": "Обезличенный текст отзыва."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["banki_ru", "sravni_ru", "app_store", "google_play", "file_import", "api_batch"],
+      "description": "Источник отзыва."
+    },
+    "rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Оценка автора от 1 до 5."
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Момент публикации отзыва."
+    },
+    "batch_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Пакет, в составе которого пришёл отзыв. Не задан для отзывов, собранных по расписанию."
+    }
+  }
+}

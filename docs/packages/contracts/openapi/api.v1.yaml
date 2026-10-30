@@ -1,0 +1,483 @@
+openapi: 3.1.0
+
+info:
+  title: ISFeedBank — Backend API
+  version: 1.0.0
+  description: |
+    Контракт REST API информационной системы управления обратной связью
+    клиентов банка. Единственный источник правды для клиентов (веб-панель,
+    мобильное приложение) и для серверной реализации.
+
+servers:
+  - url: https://api.isfeedbank.local/api/v1
+    description: Продуктивный контур
+
+tags:
+  - name: feedback
+    description: Приём и разметка отзывов
+  - name: analytics
+    description: Дашборд и отчёты
+  - name: cases
+    description: Обращения и статусы
+  - name: dictionaries
+    description: Справочники
+  - name: session
+    description: Аутентификация и роли
+  - name: admin
+    description: Административные операции
+
+paths:
+  # ───────── session ─────────
+  /session/me:
+    get:
+      tags: [session]
+      summary: Профиль и роли текущей сессии
+      operationId: getSessionMe
+      responses:
+        '200':
+          description: Профиль сотрудника
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionDto' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ───────── feedback ─────────
+  /feedback/batches:
+    post:
+      tags: [feedback]
+      summary: Принять пакет отзывов от аналитика
+      operationId: uploadFeedbackBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewBatch' }
+      responses:
+        '202':
+          description: Пакет принят, задачи разметки поставлены
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchReport' }
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /review-batches/{batch_id}:
+    get:
+      tags: [feedback]
+      summary: Статус обработки пакета
+      operationId: getReviewBatchStatus
+      parameters:
+        - name: batch_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Статус пакета
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchStatusDto' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────── analytics ─────────
+  /analytics/dashboard:
+    get:
+      tags: [analytics]
+      summary: Агрегаты дашборда настроений за период
+      operationId: getDashboard
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/Period' }
+        - name: topics
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+      responses:
+        '200':
+          description: Агрегаты дашборда
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardDto' }
+
+  /reports:
+    get:
+      tags: [analytics]
+      summary: Отчёт о закрытых обращениях и времени реакции
+      operationId: getReport
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/Period' }
+      responses:
+        '200':
+          description: Отчёт за период
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportDto' }
+
+  # ───────── cases ─────────
+  /cases:
+    get:
+      tags: [cases]
+      summary: Список обращений направления с фильтром
+      operationId: listCases
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CaseStatus' }
+        - name: direction
+          in: query
+          schema: { type: string }
+        - name: escalated
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Список обращений
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CaseDto' }
+
+  /cases/{case_id}:
+    get:
+      tags: [cases]
+      summary: Карточка обращения с историей статусов
+      operationId: getCase
+      parameters:
+        - name: case_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Карточка обращения
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseDetailsDto' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cases/{case_id}/status:
+    patch:
+      tags: [cases]
+      summary: Смена статуса обращения
+      operationId: patchCaseStatus
+      parameters:
+        - name: case_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StatusChange' }
+      responses:
+        '200':
+          description: Обновлённое обращение
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseDto' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  # ───────── dictionaries ─────────
+  /dictionaries/{kind}:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [topics, owners, sla]
+    get:
+      tags: [dictionaries]
+      summary: Записи справочника
+      operationId: listDictionaryEntries
+      responses:
+        '200':
+          description: Записи справочника
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DictionaryEntryDto' }
+    post:
+      tags: [dictionaries]
+      summary: Создать запись справочника
+      operationId: createDictionaryEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DictionaryEntryDto' }
+      responses:
+        '201':
+          description: Запись создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DictionaryEntryDto' }
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  # ───────── devices ─────────
+  /devices:
+    post:
+      tags: [session]
+      summary: Зарегистрировать push-токен устройства
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeviceRegistration' }
+      responses:
+        '204':
+          description: Токен сохранён
+
+  # ───────── admin ─────────
+  /admin/strategies:
+    put:
+      tags: [admin]
+      summary: Переключить активную стратегию модуля
+      operationId: setActiveStrategy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StrategySwitch' }
+      responses:
+        '200':
+          description: Стратегия переключена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StrategySwitch' }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SessionDto:
+      type: object
+      required: [employee_id, roles]
+      properties:
+        employee_id: { type: string }
+        full_name:   { type: string }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+
+    Role:
+      type: string
+      enum: [cx_analyst, product_owner, head_of_direction, admin]
+
+    DeviceRegistration:
+      type: object
+      required: [token, platform]
+      properties:
+        token:    { type: string }
+        platform: { type: string, enum: [ios, android] }
+        provider: { type: string, enum: [apns, rustore, fcm, hms] }
+
+    ReviewBatch:
+      type: object
+      required: [reviews]
+      properties:
+        batch_id: { type: string, format: uuid }
+        reviews:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { $ref: '#/components/schemas/RawReview' }
+
+    RawReview:
+      type: object
+      required: [text, rating, published_at]
+      properties:
+        external_id:  { type: string }
+        source:       { type: string }
+        text:         { type: string, minLength: 5, maxLength: 20000 }
+        rating:       { type: integer, minimum: 1, maximum: 5 }
+        published_at: { type: string, format: date-time }
+        author:       { type: string }
+
+    BatchReport:
+      type: object
+      required: [batch_id, accepted, rejected]
+      properties:
+        batch_id:      { type: string, format: uuid }
+        accepted:      { type: integer, minimum: 0 }
+        rejected:      { type: integer, minimum: 0 }
+        warnings:      { type: array, items: { type: string } }
+        markup_queued: { type: boolean }
+
+    BatchStatusDto:
+      type: object
+      required: [batch_id, state]
+      properties:
+        batch_id: { type: string, format: uuid }
+        state:
+          type: string
+          enum: [received, queued, labeling, done, failed]
+        progress: { type: integer, minimum: 0, maximum: 100 }
+
+    Period:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, format: date }
+        to:   { type: string, format: date }
+
+    DashboardDto:
+      type: object
+      required: [period, sentiment, topics, cached]
+      properties:
+        period: { $ref: '#/components/schemas/Period' }
+        cached: { type: boolean }
+        sentiment:
+          type: object
+          properties:
+            positive: { type: number, format: float }
+            neutral:  { type: number, format: float }
+            negative: { type: number, format: float }
+        topics:
+          type: array
+          items:
+            type: object
+            properties:
+              topic_id:   { type: string }
+              topic_name: { type: string }
+              total:      { type: integer }
+              dynamics:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:  { type: string, format: date }
+                    value: { type: integer }
+
+    ReportDto:
+      type: object
+      required: [period, closed_cases, avg_reaction_hours]
+      properties:
+        period:             { $ref: '#/components/schemas/Period' }
+        closed_cases:       { type: integer }
+        avg_reaction_hours: { type: number, format: float }
+        by_direction:
+          type: array
+          items:
+            type: object
+            properties:
+              direction: { type: string }
+              closed:    { type: integer }
+
+    CaseStatus:
+      type: string
+      enum: [new, in_progress, on_review, rejected, closed, escalated]
+
+    CaseDto:
+      type: object
+      required: [case_id, status, owner_id, created_at, due_at, version]
+      properties:
+        case_id:    { type: string, format: uuid }
+        review_id:  { type: string }
+        topic_id:   { type: string }
+        direction:  { type: string }
+        owner_id:   { type: string }
+        status:     { $ref: '#/components/schemas/CaseStatus' }
+        created_at: { type: string, format: date-time }
+        due_at:     { type: string, format: date-time }
+        escalated:  { type: boolean }
+        version:    { type: integer }
+
+    CaseDetailsDto:
+      allOf:
+        - $ref: '#/components/schemas/CaseDto'
+        - type: object
+          properties:
+            review_text: { type: string }
+            history:
+              type: array
+              items: { $ref: '#/components/schemas/StatusChangeRecord' }
+
+    StatusChangeRecord:
+      type: object
+      required: [at, from_status, to_status, author_id]
+      properties:
+        at:          { type: string, format: date-time }
+        from_status: { $ref: '#/components/schemas/CaseStatus' }
+        to_status:   { $ref: '#/components/schemas/CaseStatus' }
+        author_id:   { type: string }
+        reason:      { type: string }
+
+    StatusChange:
+      type: object
+      required: [to_status, expected_version]
+      properties:
+        to_status:        { $ref: '#/components/schemas/CaseStatus' }
+        expected_version: { type: integer }
+        reason:           { type: string }
+
+    DictionaryEntryDto:
+      type: object
+      required: [id, name]
+      properties:
+        id:   { type: string }
+        name: { type: string }
+        meta: { type: object, additionalProperties: true }
+
+    StrategySwitch:
+      type: object
+      required: [module, kind, name]
+      properties:
+        module:
+          type: string
+          enum: [ingestion, analytics, responses, auth]
+        kind: { type: string }
+        name: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Не передан или просрочен токен
+    Forbidden:
+      description: Недостаточно прав
+    NotFound:
+      description: Объект не найден
+    Conflict:
+      description: Конфликт версий (оптимистическая блокировка)
+    UnprocessableEntity:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    loc:  { type: array, items: { type: string } }
+                    msg:  { type: string }
+                    type: { type: string }
+
+security:
+  - bearerAuth: []
