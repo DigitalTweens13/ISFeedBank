@@ -18,6 +18,9 @@
 | `api_case_dto` | Обращение | L4-DTO | Backend API | Карточка обращения |
 | `api_dashboard_dto` | Агрегаты дашборда | L4-DTO | Backend API | Доли тональности и динамика |
 | `api_status_transition_rule` | Правило перехода статуса | L4-класс | Backend API | Допустимость перехода и причина отклонения |
+| `api_session_endpoint` | Эндпоинт сессии | L3-компонент | Backend API | GET /session/me — профиль и роли текущей сессии |
+| `api_device_registration_endpoint` | Эндпоинт регистрации устройств | L3-компонент | Backend API | POST /devices — регистрация push-токена |
+| `api_strategy_switch_endpoint` | Эндпоинт переключения стратегий | L3-компонент | Backend API | PUT /admin/strategies — переключение активной стратегии |
 | `mq_connection_handler` | Обработчик AMQP-соединений | L3-компонент | Брокер сообщений | Соединения, публикация с подтверждением, ack, переподключение |
 | `mq_exchange_manager` | Маршрутизатор сообщений | L3-компонент | Брокер сообщений | Объявление обменов и привязок, выбор ключа маршрутизации |
 | `mq_queue_labeling` | Очередь задач разметки | L3-компонент | Брокер сообщений | Очередь reviews.labeling |
@@ -91,7 +94,7 @@
 | `shared_exceptions` | Исключения домена | L4-класс | shared | AccessDenied, Conflict, ValidationError |
 | `shared_clock` | Часы | L4-порт | shared | Системное и тестовое время |
 | `shared_contracts_pydantic` | Pydantic-контракты | сквозной пакет | shared | Схемы сообщений и API, стык Python |
-| `shared_contracts_typescript` | TypeScript-типы из OpenAPI | сквозной пакет | shared | Стык Python → TS |
+| `shared_contracts_typescript` | TypeScript-типы | сквозной пакет | shared | Стык Python → TS |
 | `shared_openapi_spec` | OpenAPI-спецификация | сквозной артефакт | shared | Единый контракт REST |
 | `shared_events_contract` | Контракт событий брокера | сквозной артефакт | shared | Схемы reviews.labeling и cases.events |
 | `shared_observability` | Логи, метрики, trace-id | L4-порт | shared | Сквозная трассировка между контейнерами |
