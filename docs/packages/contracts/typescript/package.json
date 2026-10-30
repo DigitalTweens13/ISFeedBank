@@ -1,0 +1,11 @@
+{
+  "name": "@isfeedbank/contracts",
+  "version": "1.0.0",
+  "description": "TypeScript-типы контрактов Backend API и очередей брокера. Сгенерированы вручную по openapi/api.v1.yaml и events/*.json; синхронизируются с packages/contracts/pydantic/.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": ["src"],
+  "license": "UNLICENSED",
+  "private": true
+}

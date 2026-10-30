@@ -1,0 +1,1 @@
+Запуск программы run.bat создает на основе components.csv-файла, лежащего в docs/glossary, табличку components.md
