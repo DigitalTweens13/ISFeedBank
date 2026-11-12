@@ -50,19 +50,19 @@ lw_llm_port;Порт внешней LLM;L3-порт;Воркер разметк�
 lw_dedup_guard;Защита от повторной обработки;L4-класс;Воркер разметки;labeling_worker;code;class;Идемпотентность при повторной доставке;;план;—;Нужно для L4
 lw_gpu_runtime;GPU-рантайм;L4-класс;Воркер разметки;labeling_worker;code;class;Загрузка весов и батчинг;;план;—;Нужно для L4
 lw_strategy_factory;Фабрика стратегий;L4-класс;Воркер разметки;labeling_worker;code;class;Создание стратегии по имени;;план;—;Нужно для L4
-bg_scheduler_comp;Планировщик заданий;L3-компонент;Воркер фоновых задач;background_worker;component;component;Расписания сбора отзывов и проверки сроков;;план;—;Celery beat, L3 в разработке
-bg_collector_comp;Сборщик отзывов;L3-компонент;Воркер фоновых задач;background_worker;component;component;Забор отзывов из источника по расписанию;pydantic:ReviewsLabelingTaskV1;план;—;L3 в разработке; публикует задачи разметки
-bg_deadline_monitor_comp;Контроль сроков;L3-компонент;Воркер фоновых задач;background_worker;component;component;Выбор обращений с истекающим сроком;;план;—;L3 в разработке
-bg_escalation_comp;Эскалация просрочки;L3-компонент;Воркер фоновых задач;background_worker;component;component;Фиксация эскалации и передача руководителю;;план;—;L3 в разработке
-bg_notification_comp;Рассылка уведомлений;L3-компонент;Воркер фоновых задач;background_worker;component;component;Email и push через сервис уведомлений;;план;—;L3 в разработке
-bg_case_event_consumer;Потребитель событий обращений;L3-компонент;Воркер фоновых задач;background_worker;component;component;Читает cases.events;pydantic:CasesEventV1;план;—;L3 в разработке
-bg_labeling_publisher;Публикатор задач разметки;L3-компонент;Воркер фоновых задач;background_worker;component;component;Ставит задачи по собранным отзывам;pydantic:ReviewsLabelingTaskV1;план;—;L3 в разработке
-bg_sla_calculator;Расчёт контрольного срока;L4-класс;Воркер фоновых задач;background_worker;code;class;Срок из справочника тем и рабочих дней;;план;—;Нужно для L4
-bg_sla_strategy;Стратегия расчёта SLA;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Алгоритм расчёта срока;;план;—;Согласовано с response_management
-bg_owner_assignment_strategy;Стратегия назначения владельца;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Выбор владельца обращения;;план;—;Согласовано с BE_lab3
-bg_channel_strategy;Стратегия канала уведомлений;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Канал доставки;;план;—;Нужно для L4
-bg_notify_port;Порт сервиса уведомлений;L3-порт;Воркер фоновых задач;background_worker;port;interface;Адаптер notify_service;;план;—;Стык с notify_service
-bg_review_source_port;Порт источника отзывов;L3-порт;Воркер фоновых задач;background_worker;port;interface;Адаптер review_source;;план;—;Стык с review_source
+bg_scheduler_comp;Планировщик заданий;L3-компонент;Воркер фоновых задач;background_worker;component;component;Расписания сбора отзывов и проверки сроков;;готово;bg_l3.puml, bg_l4.puml;"Celery beat; сбор по расписанию, проверка сроков раз в минуту"
+bg_collector_comp;Сборщик отзывов;L3-компонент;Воркер фоновых задач;background_worker;component;component;Забор отзывов из источника по расписанию;pydantic:ReviewsLabelingTaskV1;готово;bg_l3.puml, bg_l4.puml;Публикует задачи через bg_labeling_publisher; публикует задачи разметки
+bg_deadline_monitor_comp;Контроль сроков;L3-компонент;Воркер фоновых задач;background_worker;component;component;Выбор обращений с истекающим сроком;;готово;bg_l3.puml, bg_l4.puml;Передаёт просрочку в bg_escalation_comp
+bg_escalation_comp;Эскалация просрочки;L3-компонент;Воркер фоновых задач;background_worker;component;component;Фиксация эскалации и передача руководителю;;готово;bg_l3.puml, bg_l4.puml;События case_escalated пока не публикуются
+bg_notification_comp;Рассылка уведомлений;L3-компонент;Воркер фоновых задач;background_worker;component;component;Email и push через сервис уведомлений;;готово;bg_l3.puml, bg_l4.puml;"Контекст стратегии bg_channel_strategy; прототип BGCode/case_processing"
+bg_case_event_consumer;Потребитель событий обращений;L3-компонент;Воркер фоновых задач;background_worker;component;component;Читает cases.events, назначает владельца и срок реакции;pydantic:CasesEventV1;готово;bg_l3.puml, bg_l4.puml;"L4 в BGCode/case_processing; назначает владельца и срок"
+bg_labeling_publisher;Публикатор задач разметки;L3-компонент;Воркер фоновых задач;background_worker;component;component;Ставит задачи по собранным отзывам;pydantic:ReviewsLabelingTaskV1;готово;bg_l3.puml, bg_l4.puml;Схема ReviewsLabelingTaskV1
+bg_sla_calculator;Расчёт контрольного срока;L4-класс;Воркер фоновых задач;background_worker;code;class;Срок из справочника тем и рабочих дней;;готово;bg_l3.puml, bg_l4.puml;"Контекст стратегии; прототип BGCode/case_processing/sla.py"
+bg_sla_strategy;Стратегия расчёта SLA;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Алгоритм расчёта срока;;готово;bg_l3.puml, bg_l4.puml;fixed_24h, topic_sla, business_days_15 (имена как в BE_lab3)
+bg_owner_assignment_strategy;Стратегия назначения владельца;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Выбор владельца обращения;;готово;bg_l3.puml, bg_l4.puml;primary_owner, least_loaded, round_robin (имена как в BE_lab3)
+bg_channel_strategy;Стратегия канала уведомлений;L4-интерфейс;Воркер фоновых задач;background_worker;code;interface;Канал доставки;;готово;bg_l3.puml, bg_l4.puml;email_only, push_only, severity_based
+bg_notify_port;Порт сервиса уведомлений;L3-порт;Воркер фоновых задач;background_worker;port;interface;Адаптер notify_service;;готово;bg_l3.puml, bg_l4.puml;Стык с notify_service (SMTP / TLS, HTTPS)
+bg_review_source_port;Порт источника отзывов;L3-порт;Воркер фоновых задач;background_worker;port;interface;Адаптер review_source;;готово;bg_l3.puml, bg_l4.puml;Стык с review_source (HTTPS / REST, JSON)
 web_analytics_view;Экран аналитики;L3-компонент;Веб-панель;web_panel;component;component;Дашборд и отчёт за период;typescript:DashboardDto, typescript:ReportDto, typescript:Period;готово;DA_Malakhova_lab2_report.docx;React, ECharts
 web_upload_view;Экран загрузки пакета;L3-компонент;Веб-панель;web_panel;component;component;Разбор файла в браузере и статус;typescript:ReviewBatch, typescript:RawReview, typescript:BatchReport, typescript:BatchStatusDto;готово;DA_Malakhova_lab2_report.docx;React, Papa Parse
 web_cases_board;Доска обращений;L3-компонент;Веб-панель;web_panel;component;component;Статусы, взятие в работу, причина отклонения;typescript:CaseDto, typescript:CaseDetailsDto, typescript:StatusChange, typescript:CaseStatus;готово;DA_Malakhova_lab2_report.docx;
@@ -98,3 +98,18 @@ shared_openapi_spec;OpenAPI-спецификация;сквозной артеф
 shared_events_contract;Контракт событий брокера;сквозной артефакт;shared;shared;contract;artifact;Схемы reviews.labeling и cases.events;pydantic:CasesEventV1, pydantic:ReviewsLabelingTaskV1, typescript:CasesEventV1, typescript:ReviewsLabelingTaskV1;готово;DQ_lab2_report_Message_Broker.docx;JSON Schema в events/
 shared_observability;Логи, метрики, trace-id;L4-порт;shared;shared;port;interface;Сквозная трассировка между контейнерами;;план;—;Нужно для аудита PR
 shared_config;Конфигурация окружений;L4-класс;shared;shared;code;class;Согласованные параметры подключений;;план;—;
+dn_employee_pc;Рабочее место сотрудника;Узел развёртывания;Развёртывание;shared;deployment;node;Компьютер сотрудника банка;;готово;deployment_l2.puml;Windows / macOS
+dn_browser;Веб-браузер;Узел развёртывания;Развёртывание;shared;deployment;node;Исполняет SPA веб-панели;;готово;deployment_l2.puml;Chrome / Edge
+dn_phone;Смартфон сотрудника;Узел развёртывания;Развёртывание;shared;deployment;node;Устройство с мобильным приложением;;готово;deployment_l2.puml;iOS / Android
+dn_dmz;Периметр банка (DMZ);Узел развёртывания;Развёртывание;shared;deployment;node;Единственная точка входа пользователей;;готово;deployment_l2.puml;Межсетевой экран
+dn_nginx;Nginx reverse proxy;Узел развёртывания;Развёртывание;shared;deployment;node;Статика SPA, TLS, балансировка API;;готово;deployment_l2.puml;2 экземпляра, порт 443
+dn_app_zone;Кластер приложений;Узел развёртывания;Развёртывание;shared;deployment;node;Сеть приложений;;готово;deployment_l2.puml;Docker / Kubernetes
+dn_api;Под Backend API;Узел развёртывания;Развёртывание;shared;deployment;node;2 реплики, порт 8000;;готово;deployment_l2.puml;uvicorn
+dn_labeling;Под воркера разметки;Узел развёртывания;Развёртывание;shared;deployment;node;1–3 реплики, GPU;;готово;deployment_l2.puml;Celery
+dn_bg;Под воркера фоновых задач;Узел развёртывания;Развёртывание;shared;deployment;node;1 реплика, worker и beat;;готово;deployment_l2.puml;Celery
+dn_data_zone;Зона данных;Узел развёртывания;Развёртывание;shared;deployment;node;Сеть данных;;готово;deployment_l2.puml;Доступ только из кластера приложений
+dn_db_primary;Сервер БД, primary;Узел развёртывания;Развёртывание;shared;deployment;node;Запись и чтение, порт 5432;;готово;deployment_l2.puml;PostgreSQL
+dn_db_replica;Сервер БД, replica;Узел развёртывания;Развёртывание;shared;deployment;node;Потоковая репликация, Patroni;;готово;deployment_l2.puml;PostgreSQL
+dn_redis;Redis, master и replica;Узел развёртывания;Развёртывание;shared;deployment;node;Кэш с автопереключением;;готово;deployment_l2.puml;Sentinel
+dn_mq;Кластер RabbitMQ, 3 узла;Узел развёртывания;Развёртывание;shared;deployment;node;Порт 5671 (AMQP + TLS), очереди quorum;;готово;deployment_l2.puml;Управление: порт 15672
+database_replica;База данных (реплика);Контейнер (только развёртывание);Развёртывание;shared;deployment;container;Горячая копия базы данных;;готово;deployment_l2.puml;Только на deployment_l2.puml

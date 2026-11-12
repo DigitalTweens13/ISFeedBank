@@ -1,0 +1,63 @@
+@startuml "dynamic_process.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' ГЛОССАРИЙ ID: см. context_l1.puml тимлида (единый для всей команды, менять только через ТЛ)
+' Правила: только Rel(); без Rel_D/R/L/U; описания элементов дословно из общих диаграмм.
+' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.
+
+LAYOUT_WITH_LEGEND()
+
+title Динамическая диаграмма. Сквозной процесс: от загрузки отзывов до реакции владельца и эскалации просрочки
+
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+    Container(web_panel, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
+    Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+    ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+    Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    Container(labeling_worker, "Воркер разметки", "Python / Celery", "Кластеризация, мультилейбл-классификация тем, определение тональности, заведение обращений при негативе")
+    Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+    Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+    ContainerDb(cache, "Кэш", "Redis", "Предрассчитанные агрегаты дашборда")
+}
+
+' --- А. Загрузка пакета и разметка отзывов (аналитик, Backend API, брокер, воркер разметки) ---
+Rel(cx_analyst, web_panel, "1. Выбирает файл с пакетом отзывов и запускает загрузку", "HTTPS")
+Rel(web_panel, api_backend, "2. Отправляет пакет отзывов (POST /feedback/batches) с токеном сессии", "HTTPS / JSON, REST")
+Rel(api_backend, bank_iam, "3. Проверяет подпись токена по открытым ключам и получает роли сотрудника", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(api_backend, database, "4. Обезличивает, отсеивает дубли и сохраняет принятые отзывы", "SQL / TCP")
+Rel(api_backend, message_broker, "5. Ставит задачу разметки на каждый принятый отзыв в очередь reviews.labeling", "AMQP")
+Rel(labeling_worker, message_broker, "6. Забирает задачу разметки из очереди reviews.labeling", "AMQP")
+Rel(labeling_worker, database, "7. Получает текст отзыва и справочник тем", "SQL / TCP")
+Rel(labeling_worker, database, "8. Сохраняет темы и тональность отзыва", "SQL / TCP")
+Rel(labeling_worker, database, "9. Заводит обращение при негативе по значимой теме", "SQL / TCP")
+Rel(labeling_worker, message_broker, "10. Публикует событие case_created в очередь cases.events и подтверждает задачу", "AMQP")
+' --- Б. Назначение владельца и уведомление (воркер фоновых задач) ---
+Rel(background_worker, message_broker, "11. Забирает событие case_created из очереди cases.events", "AMQP")
+Rel(background_worker, database, "12. Назначает обращению владельца и срок реакции", "SQL / TCP")
+Rel(background_worker, notify_service, "13. Передаёт уведомление о новом обращении владельцу продукта", "SMTP / TLS, HTTPS")
+Rel(notify_service, mobile_app, "14. Доставляет push-уведомление о новом обращении", "APNs / FCM")
+' --- В. Работа владельца в мобильном приложении ---
+Rel(product_owner, mobile_app, "15. Открывает обращение из уведомления", "HTTPS")
+Rel(mobile_app, api_backend, "16. Запрашивает карточку обращения (GET /cases/{case_id})", "HTTPS / JSON, REST")
+Rel(api_backend, database, "17. Читает обращение и историю статусов", "SQL / TCP")
+Rel(mobile_app, api_backend, "18. Передаёт смену статуса на «в работе» (PATCH /cases/{case_id}/status)", "HTTPS / JSON, REST")
+Rel(api_backend, database, "19. Проверяет допустимость перехода и записывает новый статус", "SQL / TCP")
+Rel(api_backend, cache, "20. Сбрасывает устаревшие агрегаты дашборда", "RESP / TCP")
+' --- Г. Фоновые процессы: сбор отзывов по расписанию, контроль сроков, эскалация, обращение руководителя ---
+Rel(background_worker, review_source, "21. Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
+Rel(background_worker, database, "22. Сохраняет отзывы, полученные из источника", "SQL / TCP")
+Rel(background_worker, message_broker, "23. Ставит задачи разметки для полученных отзывов в очередь reviews.labeling", "AMQP")
+Rel(background_worker, database, "24. Проверяет сроки обращений (раз в минуту)", "SQL / TCP")
+Rel(background_worker, database, "25. Фиксирует эскалацию просроченного обращения", "SQL / TCP")
+Rel(background_worker, notify_service, "26. Передаёт руководителю направления уведомление об эскалации", "SMTP / TLS, HTTPS")
+Rel(notify_service, head_of_direction, "27. Сообщает о просрочке и эскалации", "SMTP / TLS")
+Rel(head_of_direction, mobile_app, "28. Просматривает эскалации и просроченные обращения", "HTTPS")
+Rel(mobile_app, api_backend, "29. Запрашивает эскалированные обращения направления (GET /cases)", "HTTPS / JSON, REST")
+Rel(api_backend, database, "30. Читает эскалированные обращения направления", "SQL / TCP")
+@enduml

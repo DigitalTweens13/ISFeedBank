@@ -1,0 +1,40 @@
+@startuml "landscape_l0.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' ГЛОССАРИЙ ID: см. context_l1.puml тимлида (единый для всей команды, менять только через ТЛ)
+' Правила: только Rel(); без Rel_D/R/L/U; описания элементов дословно из общих диаграмм.
+' Внутри ИТ-контура банка: единый вход, система отчётности и почтовый сервер банка. Снаружи: агрегатор отзывов и push-сервисы APNs / FCM (часть notify_service).
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма системного ландшафта (L0). ИС управления обратной связью клиентов банка в ИТ-контуре банка
+
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
+
+Enterprise_Boundary(bank_it, "ИТ-контур банка") {
+    System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+    System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+    System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+    System(feedback_system, "ИС управления обратной связью клиентов банка", "Собирает и размечает отзывы, заводит обращения по негативу, назначает их владельцам, контролирует сроки и строит аналитику")
+}
+
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+
+Rel(cx_analyst, feedback_system, "Загружает пакеты отзывов, изучает дашборд настроений, формирует отчёты", "HTTPS")
+Rel(product_owner, feedback_system, "Берёт обращения своего направления в работу, меняет их статусы", "HTTPS")
+Rel(head_of_direction, feedback_system, "Просматривает просроченные обращения и эскалации", "HTTPS")
+Rel(admin, feedback_system, "Настраивает справочник тем, владельцев и сроков реакции", "HTTPS")
+Rel(cx_analyst, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(product_owner, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(head_of_direction, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(admin, bank_iam, "Входит через единый вход банка", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(feedback_system, review_source, "Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
+Rel(feedback_system, notify_service, "Передаёт уведомления о новых обращениях и эскалациях", "SMTP / TLS, HTTPS")
+Rel(feedback_system, reporting_system, "Выгружает отчёты о закрытых обращениях и времени реакции", "HTTPS / REST, JSON")
+Rel(feedback_system, bank_iam, "Проверяет подлинность и роли сотрудников", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(notify_service, product_owner, "Сообщает о новом обращении по направлению", "SMTP / TLS, APNs / FCM")
+Rel(notify_service, head_of_direction, "Сообщает о просрочке и эскалации", "SMTP / TLS, APNs / FCM")
+@enduml

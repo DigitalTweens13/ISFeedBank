@@ -1,0 +1,31 @@
+@startuml "ml_deployment.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+' Индивидуальная версия: ML, воркер разметки. Глоссарий ID и правила: см. context_l1.puml тимлида
+' ID узлов dn_* и контейнера database_replica относятся только к диаграмме развёртывания (ЛР № 4).
+' Узлы, порты и протоколы взяты из общей диаграммы deployment_l2.puml без изменений.
+
+title Диаграмма развёртывания. Фрагмент: воркер разметки
+
+Deployment_Node(dn_app_zone, "Кластер приложений", "Docker / Kubernetes, VLAN приложений", "Входящие соединения только от Nginx и между приложениями") {
+    Deployment_Node(dn_labeling, "Под воркера разметки, 1–3 реплики", "Docker, GPU, Celery", "Число реплик растёт с длиной очереди reviews.labeling") {
+        Container(labeling_worker, "Воркер разметки", "Python / Celery", "Кластеризация, мультилейбл-классификация тем, определение тональности, заведение обращений при негативе")
+    }
+}
+Deployment_Node(dn_data_zone, "Зона данных", "VLAN данных", "Доступ только из кластера приложений") {
+    Deployment_Node(dn_db_primary, "Сервер БД, primary", "Linux, PostgreSQL, порт 5432", "Принимает запись и чтение") {
+        ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+    }
+    Deployment_Node(dn_db_replica, "Сервер БД, replica", "Linux, PostgreSQL, порт 5432", "Потоковая репликация, автопереключение при отказе primary (Patroni)") {
+        ContainerDb(database_replica, "База данных (реплика)", "PostgreSQL 16", "Горячая копия базы данных: чтение и переключение при отказе primary")
+    }
+    Deployment_Node(dn_mq, "Кластер RabbitMQ, 3 узла", "RabbitMQ, порт 5671 (AMQP + TLS), порт 15672 только из сети администрирования", "Очереди quorum: каждое сообщение хранится на большинстве узлов") {
+        Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    }
+}
+
+
+Rel(labeling_worker, message_broker, "Забирает задачи разметки из reviews.labeling и публикует события в cases.events", "AMQP, TCP 5671, TLS")
+Rel(labeling_worker, database, "Сохраняет результаты разметки и заводит обращения", "SQL, TCP 5432, TLS")
+Rel(database_replica, database, "Получает журнал изменений WAL от primary", "Потоковая репликация PostgreSQL, TCP 5432, TLS")
+@enduml

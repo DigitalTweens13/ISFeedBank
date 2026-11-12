@@ -1,0 +1,24 @@
+Добавить новое значение в информационный контур
+
+1. Правите источник правды в api.v1.yaml (REST) или events/*.json (события)
+2. Запускаете python -m scripts.generate_contracts
+3. Редактируете TypeScript typescript/src/api.ts или typescript/src/events.ts
+4. Обновляете глоссарий в components.csv при необходимости
+5. Делаете проверки 
+python -m scripts.check_glossary    # OK
+python check_import.py              # 9 OK
+6. Проявляете изменения в PR отчете
+7. Используете в проекте
+
+Удаляем поле из контракта
+
+1. Разработчик оценивает риск
+2. Примите решение об изменении версии - если проводится удаление обязательного поля стоит провести изменение версии
+3. Затем — источник правды cases.events.v1.json
+Затем — python -m scripts.generate_contracts
+Затем — typescript/src/events.ts
+Затем — components.csv
+4. Проверки
+python -m scripts.check_glossary    # OK — класс CasesEventV1 всё ещё существует
+python check_import.py              # 9 OK — модель валидируется
+5. Отразить в PR

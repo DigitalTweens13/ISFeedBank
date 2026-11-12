@@ -1,0 +1,37 @@
+@startuml "bg_landscape_l0.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: BG, воркер фоновых задач. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Фокус: background_worker. Показаны только соседи фокуса и их окружение в ИТ-контуре банка; каждая связь взята из общей диаграммы L2 без изменений.
+
+title Диаграмма системного ландшафта (L0) ИС управления обратной связью клиентов банка. Фокус: воркер фоновых задач
+
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+
+Enterprise_Boundary(bank_it, "ИТ-контур банка") {
+    System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+    System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+        Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+        Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+        ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+        Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+    }
+}
+
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+
+Rel(product_owner, mobile_app, "Меняет статусы обращений вне рабочего места", "HTTPS")
+Rel(head_of_direction, mobile_app, "Просматривает эскалации и просроченные обращения", "HTTPS")
+Rel(background_worker, review_source, "Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
+Rel(background_worker, message_broker, "Ставит задачи разметки для полученных отзывов", "AMQP")
+Rel(background_worker, message_broker, "Забирает события по обращениям из очереди cases.events", "AMQP")
+Rel(background_worker, database, "Сохраняет отзывы, полученные из источника", "SQL / TCP")
+Rel(background_worker, database, "Назначает обращению владельца и срок реакции", "SQL / TCP")
+Rel(background_worker, database, "Проверяет сроки обращений", "SQL / TCP")
+Rel(background_worker, database, "Фиксирует эскалацию просроченного обращения", "SQL / TCP")
+Rel(background_worker, notify_service, "Передаёт уведомления о новых обращениях и эскалациях", "SMTP / TLS, HTTPS")
+Rel(notify_service, mobile_app, "Доставляет push-уведомления об обращениях и эскалациях", "APNs / FCM")
+Rel(notify_service, product_owner, "Сообщает о новом обращении по направлению", "SMTP / TLS")
+Rel(notify_service, head_of_direction, "Сообщает о просрочке и эскалации", "SMTP / TLS")
+@enduml

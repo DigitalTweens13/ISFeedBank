@@ -1,0 +1,22 @@
+@startuml "dq_dynamic.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: DQ, брокер сообщений. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.
+' Показаны шаги общего процесса, в которых участвует message_broker.
+
+title Динамическая диаграмма. Фрагмент: брокер сообщений
+
+System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+    Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+    Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    Container(labeling_worker, "Воркер разметки", "Python / Celery", "Кластеризация, мультилейбл-классификация тем, определение тональности, заведение обращений при негативе")
+    Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+}
+
+Rel(api_backend, message_broker, "5. Ставит задачу разметки на каждый принятый отзыв в очередь reviews.labeling", "AMQP")
+Rel(labeling_worker, message_broker, "6. Забирает задачу разметки из очереди reviews.labeling", "AMQP")
+Rel(labeling_worker, message_broker, "10. Публикует событие case_created в очередь cases.events и подтверждает задачу", "AMQP")
+Rel(background_worker, message_broker, "11. Забирает событие case_created из очереди cases.events", "AMQP")
+Rel(background_worker, message_broker, "23. Ставит задачи разметки для полученных отзывов в очередь reviews.labeling", "AMQP")
+@enduml

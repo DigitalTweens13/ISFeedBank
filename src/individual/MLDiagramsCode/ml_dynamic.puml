@@ -1,0 +1,21 @@
+@startuml "ml_dynamic.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: ML, воркер разметки. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.
+' Показаны шаги общего процесса, в которых участвует labeling_worker.
+
+title Динамическая диаграмма. Фрагмент: воркер разметки
+
+System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+    Container(labeling_worker, "Воркер разметки", "Python / Celery", "Кластеризация, мультилейбл-классификация тем, определение тональности, заведение обращений при негативе")
+    Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+}
+
+Rel(labeling_worker, message_broker, "6. Забирает задачу разметки из очереди reviews.labeling", "AMQP")
+Rel(labeling_worker, database, "7. Получает текст отзыва и справочник тем", "SQL / TCP")
+Rel(labeling_worker, database, "8. Сохраняет темы и тональность отзыва", "SQL / TCP")
+Rel(labeling_worker, database, "9. Заводит обращение при негативе по значимой теме", "SQL / TCP")
+Rel(labeling_worker, message_broker, "10. Публикует событие case_created в очередь cases.events и подтверждает задачу", "AMQP")
+@enduml

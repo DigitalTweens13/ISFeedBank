@@ -1,0 +1,38 @@
+@startuml "fe_landscape_l0.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: FE, веб-панель и мобильное приложение. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Фокус: web_panel, mobile_app. Показаны только соседи фокуса и их окружение в ИТ-контуре банка; каждая связь взята из общей диаграммы L2 без изменений.
+
+title Диаграмма системного ландшафта (L0) ИС управления обратной связью клиентов банка. Фокус: веб-панель и мобильное приложение
+
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+
+Enterprise_Boundary(bank_it, "ИТ-контур банка") {
+    System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+    System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+    System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+        Container(web_panel, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
+        Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+        Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+    }
+}
+
+
+Rel(cx_analyst, web_panel, "Загружает пакеты отзывов, изучает дашборд, формирует отчёты", "HTTPS")
+Rel(admin, web_panel, "Настраивает темы, владельцев и сроки реакции", "HTTPS")
+Rel(product_owner, web_panel, "Берёт обращения своего направления в работу", "HTTPS")
+Rel(product_owner, mobile_app, "Меняет статусы обращений вне рабочего места", "HTTPS")
+Rel(head_of_direction, mobile_app, "Просматривает эскалации и просроченные обращения", "HTTPS")
+Rel(web_panel, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(mobile_app, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(web_panel, api_backend, "Запрашивает отзывы, обращения, аналитику и справочники", "HTTPS / JSON, REST")
+Rel(mobile_app, api_backend, "Запрашивает обращения и передаёт смену статуса", "HTTPS / JSON, REST")
+Rel(api_backend, bank_iam, "Проверяет подлинность и роли сотрудников", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(notify_service, mobile_app, "Доставляет push-уведомления об обращениях и эскалациях", "APNs / FCM")
+Rel(notify_service, product_owner, "Сообщает о новом обращении по направлению", "SMTP / TLS")
+Rel(notify_service, head_of_direction, "Сообщает о просрочке и эскалации", "SMTP / TLS")
+@enduml
