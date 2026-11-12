@@ -1,0 +1,39 @@
+@startuml "bg_deployment.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+' Индивидуальная версия: BG, воркер фоновых задач. Глоссарий ID и правила: см. context_l1.puml тимлида
+' ID узлов dn_* и контейнера database_replica относятся только к диаграмме развёртывания (ЛР № 4).
+' Узлы, порты и протоколы взяты из общей диаграммы deployment_l2.puml без изменений.
+
+title Диаграмма развёртывания (L2). Фрагмент: воркер фоновых задач
+
+Deployment_Node(dn_phone, "Смартфон сотрудника", "iOS / Android", "Устройство владельца продукта или руководителя направления") {
+    Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+}
+Deployment_Node(dn_app_zone, "Кластер приложений", "Docker / Kubernetes, VLAN приложений", "Входящие соединения только от Nginx и между приложениями") {
+    Deployment_Node(dn_bg, "Под воркера фоновых задач, 1 реплика", "Docker, Celery worker и beat", "Одна реплика, чтобы расписание не дублировалось; при падении перезапускается, задачи идемпотентны") {
+        Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+    }
+}
+Deployment_Node(dn_data_zone, "Зона данных", "VLAN данных", "Доступ только из кластера приложений") {
+    Deployment_Node(dn_db_primary, "Сервер БД, primary", "Linux, PostgreSQL, порт 5432", "Принимает запись и чтение") {
+        ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+    }
+    Deployment_Node(dn_db_replica, "Сервер БД, replica", "Linux, PostgreSQL, порт 5432", "Потоковая репликация, автопереключение при отказе primary (Patroni)") {
+        ContainerDb(database_replica, "База данных (реплика)", "PostgreSQL 16", "Горячая копия базы данных: чтение и переключение при отказе primary")
+    }
+    Deployment_Node(dn_mq, "Кластер RabbitMQ, 3 узла", "RabbitMQ, порт 5671 (AMQP + TLS), порт 15672 только из сети администрирования", "Очереди quorum: каждое сообщение хранится на большинстве узлов") {
+        Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    }
+}
+
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+
+Rel(background_worker, review_source, "Забирает новые отзывы по расписанию", "HTTPS, TCP 443, TLS 1.3 / REST, JSON")
+Rel(background_worker, message_broker, "Ставит задачи разметки и забирает события из cases.events", "AMQP, TCP 5671, TLS")
+Rel(background_worker, database, "Сохраняет отзывы, проверяет сроки, назначает владельцев и фиксирует эскалации", "SQL, TCP 5432, TLS")
+Rel(background_worker, notify_service, "Передаёт уведомления о новых обращениях и эскалациях", "SMTP, TCP 587, STARTTLS / HTTPS, TCP 443")
+Rel(notify_service, mobile_app, "Доставляет push-уведомления об обращениях и эскалациях", "APNs / FCM, TCP 443, TLS")
+Rel(database_replica, database, "Получает журнал изменений WAL от primary", "Потоковая репликация PostgreSQL, TCP 5432, TLS")
+@enduml

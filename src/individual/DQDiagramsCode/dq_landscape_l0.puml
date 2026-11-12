@@ -1,0 +1,25 @@
+@startuml "dq_landscape_l0.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: DQ, брокер сообщений. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Фокус: message_broker. Показаны только соседи фокуса и их окружение в ИТ-контуре банка; каждая связь взята из общей диаграммы L2 без изменений.
+
+title Диаграмма системного ландшафта (L0) ИС управления обратной связью клиентов банка. Фокус: брокер сообщений
+
+
+Enterprise_Boundary(bank_it, "ИТ-контур банка") {
+    System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+        Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+        Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+        Container(labeling_worker, "Воркер разметки", "Python / Celery", "Кластеризация, мультилейбл-классификация тем, определение тональности, заведение обращений при негативе")
+        Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+    }
+}
+
+
+Rel(api_backend, message_broker, "Ставит задачи разметки для загруженного пакета отзывов", "AMQP")
+Rel(labeling_worker, message_broker, "Забирает задачи разметки из очереди reviews.labeling", "AMQP")
+Rel(labeling_worker, message_broker, "Публикует событие «обращение создано» в очередь cases.events", "AMQP")
+Rel(background_worker, message_broker, "Ставит задачи разметки для полученных отзывов", "AMQP")
+Rel(background_worker, message_broker, "Забирает события по обращениям из очереди cases.events", "AMQP")
+@enduml

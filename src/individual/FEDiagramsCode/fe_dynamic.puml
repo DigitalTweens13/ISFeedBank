@@ -1,0 +1,28 @@
+@startuml "fe_dynamic.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: FE, веб-панель и мобильное приложение. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.
+' Показаны шаги общего процесса, в которых участвует web_panel, mobile_app.
+
+title Динамическая диаграмма. Фрагмент: веб-панель и мобильное приложение
+
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(head_of_direction, "Руководитель направления", "Контролирует сроки реакции на обращения, получает эскалации")
+System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+    Container(web_panel, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
+    Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+    Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+}
+
+Rel(cx_analyst, web_panel, "1. Выбирает файл с пакетом отзывов и запускает загрузку", "HTTPS")
+Rel(web_panel, api_backend, "2. Отправляет пакет отзывов (POST /feedback/batches) с токеном сессии", "HTTPS / JSON, REST")
+Rel(notify_service, mobile_app, "14. Доставляет push-уведомление о новом обращении", "APNs / FCM")
+Rel(product_owner, mobile_app, "15. Открывает обращение из уведомления", "HTTPS")
+Rel(mobile_app, api_backend, "16. Запрашивает карточку обращения (GET /cases/{case_id})", "HTTPS / JSON, REST")
+Rel(mobile_app, api_backend, "18. Передаёт смену статуса на «в работе» (PATCH /cases/{case_id}/status)", "HTTPS / JSON, REST")
+Rel(head_of_direction, mobile_app, "28. Просматривает эскалации и просроченные обращения", "HTTPS")
+Rel(mobile_app, api_backend, "29. Запрашивает эскалированные обращения направления (GET /cases)", "HTTPS / JSON, REST")
+@enduml

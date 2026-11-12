@@ -1,0 +1,72 @@
+@startuml "deployment_l2.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+' ГЛОССАРИЙ ID: см. context_l1.puml тимлида (единый для всей команды, менять только через ТЛ)
+' Правила: только Rel(); без Rel_D/R/L/U; описания элементов дословно из общих диаграмм.
+' ID узлов dn_* и контейнера database_replica относятся только к диаграмме развёртывания (ЛР № 4).
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма развёртывания. ИС управления обратной связью клиентов банка
+
+Deployment_Node(dn_employee_pc, "Рабочее место сотрудника", "Windows / macOS", "Корпоративный компьютер сотрудника банка") {
+    Deployment_Node(dn_browser, "Веб-браузер", "Chrome / Edge", "Исполняет SPA веб-панели") {
+        Container(web_panel, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
+    }
+}
+Deployment_Node(dn_phone, "Смартфон сотрудника", "iOS / Android", "Устройство владельца продукта или руководителя направления") {
+    Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+}
+Deployment_Node(dn_dmz, "Периметр банка (DMZ)", "Межсетевой экран, VLAN DMZ", "Единственная точка входа пользователей в систему") {
+    Deployment_Node(dn_nginx, "Nginx reverse proxy, 2 экземпляра", "Nginx, порт 443, TLS 1.3", "Отдаёт статику SPA, завершает TLS, балансирует запросы к API по least_conn, общий виртуальный адрес keepalived")
+}
+Deployment_Node(dn_app_zone, "Кластер приложений", "Docker / Kubernetes, VLAN приложений", "Входящие соединения только от Nginx и между приложениями") {
+    Deployment_Node(dn_api, "Под Backend API, 2 реплики", "Docker, Python, uvicorn, порт 8000", "Реплики без состояния: сессия хранится в токене") {
+        Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+    }
+    Deployment_Node(dn_labeling, "Под воркера разметки, 1–3 реплики", "Docker, GPU, Celery", "Число реплик растёт с длиной очереди reviews.labeling") {
+        Container(labeling_worker, "Воркер разметки", "Python / Celery", "Кластеризация, мультилейбл-классификация тем, определение тональности, заведение обращений при негативе")
+    }
+    Deployment_Node(dn_bg, "Под воркера фоновых задач, 1 реплика", "Docker, Celery worker и beat", "Одна реплика, чтобы расписание не дублировалось; при падении перезапускается, задачи идемпотентны") {
+        Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+    }
+}
+Deployment_Node(dn_data_zone, "Зона данных", "VLAN данных", "Доступ только из кластера приложений") {
+    Deployment_Node(dn_db_primary, "Сервер БД, primary", "Linux, PostgreSQL, порт 5432", "Принимает запись и чтение") {
+        ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+    }
+    Deployment_Node(dn_db_replica, "Сервер БД, replica", "Linux, PostgreSQL, порт 5432", "Потоковая репликация, автопереключение при отказе primary (Patroni)") {
+        ContainerDb(database_replica, "База данных (реплика)", "PostgreSQL 16", "Горячая копия базы данных: чтение и переключение при отказе primary")
+    }
+    Deployment_Node(dn_redis, "Redis, master и replica", "Redis, порт 6379, Sentinel", "Автоматическое переключение на replica при отказе master") {
+        ContainerDb(cache, "Кэш", "Redis", "Предрассчитанные агрегаты дашборда")
+    }
+    Deployment_Node(dn_mq, "Кластер RabbitMQ, 3 узла", "RabbitMQ, порт 5671 (AMQP + TLS), порт 15672 только из сети администрирования", "Очереди quorum: каждое сообщение хранится на большинстве узлов") {
+        Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    }
+}
+
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+
+Rel(web_panel, dn_nginx, "Загружает статику SPA и вызывает REST API", "HTTPS, TCP 443, TLS 1.3")
+Rel(mobile_app, dn_nginx, "Вызывает REST API", "HTTPS, TCP 443, TLS 1.3")
+Rel(dn_nginx, api_backend, "Передаёт запросы, балансируя между репликами", "HTTP, TCP 8000, внутренняя сеть")
+Rel(web_panel, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
+Rel(mobile_app, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
+Rel(api_backend, bank_iam, "Проверяет подлинность и роли сотрудников", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
+Rel(api_backend, database, "Сохраняет и получает отзывы, обращения, историю статусов и справочники", "SQL, TCP 5432, TLS")
+Rel(api_backend, cache, "Получает и обновляет агрегаты дашборда", "RESP, TCP 6379, TLS")
+Rel(api_backend, message_broker, "Ставит задачи разметки для загруженного пакета отзывов", "AMQP, TCP 5671, TLS")
+Rel(api_backend, reporting_system, "Выгружает отчёты за период", "HTTPS, TCP 443, TLS 1.3 / REST, JSON")
+Rel(labeling_worker, message_broker, "Забирает задачи разметки из reviews.labeling и публикует события в cases.events", "AMQP, TCP 5671, TLS")
+Rel(labeling_worker, database, "Сохраняет результаты разметки и заводит обращения", "SQL, TCP 5432, TLS")
+Rel(background_worker, review_source, "Забирает новые отзывы по расписанию", "HTTPS, TCP 443, TLS 1.3 / REST, JSON")
+Rel(background_worker, message_broker, "Ставит задачи разметки и забирает события из cases.events", "AMQP, TCP 5671, TLS")
+Rel(background_worker, database, "Сохраняет отзывы, проверяет сроки, назначает владельцев и фиксирует эскалации", "SQL, TCP 5432, TLS")
+Rel(background_worker, notify_service, "Передаёт уведомления о новых обращениях и эскалациях", "SMTP, TCP 587, STARTTLS / HTTPS, TCP 443")
+Rel(notify_service, mobile_app, "Доставляет push-уведомления об обращениях и эскалациях", "APNs / FCM, TCP 443, TLS")
+Rel(database_replica, database, "Получает журнал изменений WAL от primary", "Потоковая репликация PostgreSQL, TCP 5432, TLS")
+@enduml

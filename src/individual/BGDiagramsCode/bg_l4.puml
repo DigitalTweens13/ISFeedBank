@@ -1,0 +1,202 @@
+@startuml "bg_l4.puml"
+' L4 — диаграмма классов компонента bg_case_event_consumer (Потребитель событий обращений)
+' и связанной с ним рассылки bg_notification_comp. Код прототипа: src/individual/BGCode/case_processing
+
+left to right direction
+
+title L4 — Обработка события обращения (паттерн «Стратегия»)
+
+package case_processing {
+
+    class CaseEventConsumer <<bg_case_event_consumer>> {
+        - _repository: CaseRepository
+        - _sla: SlaCalculator
+        - _owners: OwnerAssignmentStrategy
+        - _dispatcher: NotificationDispatcher
+        + __init__(repository: CaseRepository, sla: SlaCalculator, owners: OwnerAssignmentStrategy, dispatcher: NotificationDispatcher)
+        + set_owner_strategy(strategy: OwnerAssignmentStrategy): None
+        + handle(message: bytes | str | Mapping[str, Any]): ProcessingResult | None
+        - {static} _parse(message: bytes | str | Mapping[str, Any]): CasesEventV1
+    }
+
+    class SlaCalculator <<bg_sla_calculator, context>> {
+        - _strategy: SlaStrategy
+        + __init__(strategy: SlaStrategy)
+        + strategy: SlaStrategy {readOnly}
+        + set_strategy(strategy: SlaStrategy): None
+        + calculate(case: CaseInfo): SlaResult
+    }
+
+    abstract class SlaStrategy <<bg_sla_strategy, interface>> {
+        + name: str
+        + {abstract} due_at(case: CaseInfo): datetime
+    }
+
+    class FixedHoursSla {
+        + name = "fixed_24h"
+        - _hours: int
+        + __init__(hours: int = 24)
+        + due_at(case: CaseInfo): datetime
+    }
+
+    class TopicSla {
+        + name = "topic_sla"
+        - _hours: dict[str, int]
+        - _default: int
+        + __init__(hours_by_direction: Mapping[str, int], default_hours: int = 24)
+        + due_at(case: CaseInfo): datetime
+    }
+
+    class BusinessDaysSla {
+        + name = "business_days_15"
+        - _days: int
+        - _holidays: frozenset[date]
+        + __init__(days: int = 15, holidays: frozenset[date] = frozenset())
+        + due_at(case: CaseInfo): datetime
+    }
+
+    abstract class OwnerAssignmentStrategy <<bg_owner_assignment_strategy, interface>> {
+        + name: str
+        + choose(candidates: Sequence[OwnerCandidate]): str
+        # {abstract} _pick(candidates: Sequence[OwnerCandidate]): str
+    }
+
+    class PrimaryOwnerStrategy {
+        + name = "primary_owner"
+    }
+
+    class LeastLoadedStrategy {
+        + name = "least_loaded"
+    }
+
+    class RoundRobinStrategy {
+        + name = "round_robin"
+        - _counter: int
+    }
+
+    class NotificationDispatcher <<bg_notification_comp, context>> {
+        - _strategy: ChannelStrategy
+        - _port: NotifyPort
+        + __init__(strategy: ChannelStrategy, port: NotifyPort)
+        + set_strategy(strategy: ChannelStrategy): None
+        + notify_new_case(case: CaseInfo, owner_id: str, sla: SlaResult): tuple[Channel, ...]
+    }
+
+    abstract class ChannelStrategy <<bg_channel_strategy, interface>> {
+        + name: str
+        + {abstract} channels(severity: Severity | None): tuple[Channel, ...]
+    }
+
+    class EmailOnlyChannel {
+        + name = "email_only"
+    }
+
+    class PushOnlyChannel {
+        + name = "push_only"
+    }
+
+    class SeverityBasedChannel {
+        + name = "severity_based"
+    }
+
+    interface CaseRepository <<Protocol>> {
+        + owner_candidates(direction: str | None): Sequence[OwnerCandidate]
+        + assign(case_id: str, owner_id: str, due_at: datetime): bool
+    }
+
+    interface NotifyPort <<Protocol, bg_notify_port>> {
+        + send(notification: Notification): None
+    }
+
+    class StrategyRegistry<S> {
+        - _factories: dict[str, Callable[[], S]]
+        + register(name: str, factory: Callable[[], S]): None
+        + create(name: str): S
+        + names(): list[str]
+    }
+
+    class CaseInfo <<dataclass, frozen>> {
+        + case_id: UUID
+        + review_id: UUID
+        + created_at: datetime
+        + severity: Severity | None
+        + direction: str | None
+    }
+
+    class OwnerCandidate <<dataclass, frozen>> {
+        + owner_id: str
+        + open_cases: int
+    }
+
+    class SlaResult <<dataclass, frozen>> {
+        + due_at: datetime
+        + rule: str
+    }
+
+    class Notification <<dataclass, frozen>> {
+        + case_id: UUID
+        + recipient_id: str
+        + channel: Channel
+        + subject: str
+        + body: str
+    }
+
+    class ProcessingResult <<dataclass, frozen>> {
+        + case_id: UUID
+        + owner_id: str
+        + due_at: datetime
+        + sla_rule: str
+        + channels: tuple[Channel, ...]
+    }
+
+    enum Channel {
+        EMAIL
+        PUSH
+    }
+
+    class InvalidEventError <<exception>>
+    class NoOwnerAvailableError <<exception>>
+}
+
+class CasesEventV1 <<pydantic, contracts/events/cases.events.v1.json>> {
+    + event_type: EventType
+    + case_id: UUID
+    + review_id: UUID
+    + occurred_at: AwareDatetime
+    + severity: Severity | None
+    + direction: str | None
+}
+
+CaseEventConsumer o--> "1" SlaCalculator : срок реакции >
+CaseEventConsumer o--> "1" OwnerAssignmentStrategy : выбор владельца >
+CaseEventConsumer o--> "1" NotificationDispatcher : рассылка >
+CaseEventConsumer --> "1" CaseRepository : запись владельца и срока >
+CaseEventConsumer ..> CasesEventV1 : проверяет по схеме
+CaseEventConsumer ..> InvalidEventError : <<throws>>
+CaseEventConsumer ..> ProcessingResult : <<create>>
+
+SlaCalculator o--> "1" SlaStrategy : делегирует расчёт >
+SlaCalculator ..> SlaResult : <<create>>
+FixedHoursSla ..|> SlaStrategy
+TopicSla ..|> SlaStrategy
+BusinessDaysSla ..|> SlaStrategy
+
+PrimaryOwnerStrategy --|> OwnerAssignmentStrategy
+LeastLoadedStrategy --|> OwnerAssignmentStrategy
+RoundRobinStrategy --|> OwnerAssignmentStrategy
+OwnerAssignmentStrategy ..> NoOwnerAvailableError : <<throws>>
+OwnerAssignmentStrategy ..> OwnerCandidate : читает
+
+NotificationDispatcher o--> "1" ChannelStrategy : выбор каналов >
+NotificationDispatcher --> "1" NotifyPort : отправка >
+NotificationDispatcher ..> Notification : <<create>>
+EmailOnlyChannel ..|> ChannelStrategy
+PushOnlyChannel ..|> ChannelStrategy
+SeverityBasedChannel ..|> ChannelStrategy
+
+SlaStrategy ..> CaseInfo : читает
+CaseEventConsumer ..> CaseInfo : <<create>>
+StrategyRegistry ..> SlaStrategy : <<create>>
+StrategyRegistry ..> OwnerAssignmentStrategy : <<create>>
+StrategyRegistry ..> ChannelStrategy : <<create>>
+@enduml

@@ -1,0 +1,31 @@
+@startuml "be_dynamic.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Индивидуальная версия: BE, Backend API. Глоссарий ID и правила: см. context_l1.puml тимлида
+' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.
+' Показаны шаги общего процесса, в которых участвует api_backend.
+
+title Динамическая диаграмма. Фрагмент: Backend API
+
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
+    Container(web_panel, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
+    Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+    ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+    Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+    ContainerDb(cache, "Кэш", "Redis", "Предрассчитанные агрегаты дашборда")
+}
+
+Rel(web_panel, api_backend, "2. Отправляет пакет отзывов (POST /feedback/batches) с токеном сессии", "HTTPS / JSON, REST")
+Rel(api_backend, bank_iam, "3. Проверяет подпись токена по открытым ключам и получает роли сотрудника", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(api_backend, database, "4. Обезличивает, отсеивает дубли и сохраняет принятые отзывы", "SQL / TCP")
+Rel(api_backend, message_broker, "5. Ставит задачу разметки на каждый принятый отзыв в очередь reviews.labeling", "AMQP")
+Rel(mobile_app, api_backend, "16. Запрашивает карточку обращения (GET /cases/{case_id})", "HTTPS / JSON, REST")
+Rel(api_backend, database, "17. Читает обращение и историю статусов", "SQL / TCP")
+Rel(mobile_app, api_backend, "18. Передаёт смену статуса на «в работе» (PATCH /cases/{case_id}/status)", "HTTPS / JSON, REST")
+Rel(api_backend, database, "19. Проверяет допустимость перехода и записывает новый статус", "SQL / TCP")
+Rel(api_backend, cache, "20. Сбрасывает устаревшие агрегаты дашборда", "RESP / TCP")
+Rel(mobile_app, api_backend, "29. Запрашивает эскалированные обращения направления (GET /cases)", "HTTPS / JSON, REST")
+Rel(api_backend, database, "30. Читает эскалированные обращения направления", "SQL / TCP")
+@enduml
