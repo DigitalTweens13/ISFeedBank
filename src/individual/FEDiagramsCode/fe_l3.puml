@@ -1,5 +1,6 @@
 @startuml "fe_components_l3.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: L3, контейнер «Мобильное приложение». Глоссарий ID и правила: см. context_l1.puml тимлида
 ' Слои: представление (mob_navigator, mob_*_screen) -> прикладной (mob_query, mob_push) -> инфраструктура (mob_api_client, mob_auth); push приходит извне, поэтому mob_push вызывает навигатор

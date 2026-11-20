@@ -12,6 +12,10 @@
 #     изменённые в последнем коммите.
 #   - При pull_request в main выполняется только валидация синтаксиса
 #     (рендер без коммита).
+#   - Перед рендерингом выполняется проверка правил оформления .puml:
+#     критические ошибки (Rel_*, отсутствие @startuml/@enduml) роняют job,
+#     предупреждения (skinparam, Rel() без протокола) выводятся в Annotations
+#     и Summary, но рендер продолжается.
 #
 # Структура вывода:
 #   - src/*.puml                       -> docs/images/auto_ci_images/
@@ -113,6 +117,15 @@ jobs:
             echo "files=$FILES" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
+
+      # Проверка правил оформления .puml.
+      # Критические ошибки (Rel_*, отсутствие @startuml/@enduml) роняют job.
+      # Предупреждения (skinparam, Rel() без протокола) выводятся в Annotations
+      # и Summary, но не блокируют рендеринг.
+      - name: Check .puml styling rules
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          python scripts/check_puml_rules.py
 
       # Рендеринг выбранных файлов с сохранением структуры каталогов.
       # Шаг пропускается, если изменений нет.

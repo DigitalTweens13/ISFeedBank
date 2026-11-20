@@ -1,4 +1,8 @@
 @startuml "cicd_test.puml"
+!include <C4/C4_Container>
+
 title Диаграмма тестирования CI/CD
 
 System(happy_system, "Оно работает", "Ура!")
+
+@enduml

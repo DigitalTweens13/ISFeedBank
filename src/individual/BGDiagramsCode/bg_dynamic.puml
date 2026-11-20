@@ -1,5 +1,6 @@
 @startuml "bg_dynamic.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: BG, воркер фоновых задач. Глоссарий ID и правила: см. context_l1.puml тимлида
 ' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.
@@ -7,21 +8,21 @@
 
 title Динамическая диаграмма. Фрагмент: воркер фоновых задач
 
-System_Ext(notify_service, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
-System_Ext(review_source, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
-System_Boundary(feedback_system, "ИС управления обратной связью клиентов банка") {
-    Container(background_worker, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
-    Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
-    ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+System_Ext($ID_NOTIFY_SERVICE, "Сервис уведомлений", "Почтовый сервер банка и push-сервисы APNs / FCM")
+System_Ext($ID_REVIEW_SOURCE, "Источник отзывов", "Агрегатор отзывов о банках с программным интерфейсом выгрузки")
+System_Boundary($ID_FEEDBACK_SYSTEM, "ИС управления обратной связью клиентов банка") {
+    Container($ID_BACKGROUND_WORKER, "Воркер фоновых задач", "Python / Celery beat", "Сбор отзывов по расписанию, контроль сроков, эскалации, рассылка уведомлений")
+    Container($ID_MESSAGE_BROKER, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    ContainerDb($ID_DATABASE, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
 }
 
-Rel(background_worker, message_broker, "11. Забирает событие case_created из очереди cases.events", "AMQP")
-Rel(background_worker, database, "12. Назначает обращению владельца и срок реакции", "SQL / TCP")
-Rel(background_worker, notify_service, "13. Передаёт уведомление о новом обращении владельцу продукта", "SMTP / TLS, HTTPS")
-Rel(background_worker, review_source, "21. Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
-Rel(background_worker, database, "22. Сохраняет отзывы, полученные из источника", "SQL / TCP")
-Rel(background_worker, message_broker, "23. Ставит задачи разметки для полученных отзывов в очередь reviews.labeling", "AMQP")
-Rel(background_worker, database, "24. Проверяет сроки обращений (раз в минуту)", "SQL / TCP")
-Rel(background_worker, database, "25. Фиксирует эскалацию просроченного обращения", "SQL / TCP")
-Rel(background_worker, notify_service, "26. Передаёт руководителю направления уведомление об эскалации", "SMTP / TLS, HTTPS")
+Rel($ID_BACKGROUND_WORKER, $ID_MESSAGE_BROKER, "11. Забирает событие case_created из очереди cases.events", "AMQP")
+Rel($ID_BACKGROUND_WORKER, $ID_DATABASE, "12. Назначает обращению владельца и срок реакции", "SQL / TCP")
+Rel($ID_BACKGROUND_WORKER, $ID_NOTIFY_SERVICE, "13. Передаёт уведомление о новом обращении владельцу продукта", "SMTP / TLS, HTTPS")
+Rel($ID_BACKGROUND_WORKER, $ID_REVIEW_SOURCE, "21. Забирает новые отзывы по расписанию", "HTTPS / REST, JSON")
+Rel($ID_BACKGROUND_WORKER, $ID_DATABASE, "22. Сохраняет отзывы, полученные из источника", "SQL / TCP")
+Rel($ID_BACKGROUND_WORKER, $ID_MESSAGE_BROKER, "23. Ставит задачи разметки для полученных отзывов в очередь reviews.labeling", "AMQP")
+Rel($ID_BACKGROUND_WORKER, $ID_DATABASE, "24. Проверяет сроки обращений (раз в минуту)", "SQL / TCP")
+Rel($ID_BACKGROUND_WORKER, $ID_DATABASE, "25. Фиксирует эскалацию просроченного обращения", "SQL / TCP")
+Rel($ID_BACKGROUND_WORKER, $ID_NOTIFY_SERVICE, "26. Передаёт руководителю направления уведомление об эскалации", "SMTP / TLS, HTTPS")
 @enduml

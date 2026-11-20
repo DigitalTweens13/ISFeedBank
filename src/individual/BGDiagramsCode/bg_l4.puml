@@ -1,6 +1,7 @@
 @startuml "bg_l4.puml"
 ' L4 — диаграмма классов компонента bg_case_event_consumer (Потребитель событий обращений)
 ' и связанной с ним рассылки bg_notification_comp. Код прототипа: src/individual/BGCode/case_processing
+!include ../../main.puml
 
 left to right direction
 

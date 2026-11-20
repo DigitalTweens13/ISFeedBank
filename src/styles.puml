@@ -1,0 +1,29 @@
+' src/styles.puml
+' Общие стили для всех C4-диаграмм проекта ISFeedBank.
+' Подключается через !include в каждый .puml-файл.
+
+' === Цветовая схема проекта ===
+!define PERSON_BG_COLOR #08427B
+!define SYSTEM_BG_COLOR #1168BD
+!define EXTERNAL_SYSTEM_BG_COLOR #999999
+!define CONTAINER_BG_COLOR #438DD5
+
+' === Общие skinparam (разрешены ТОЛЬКО здесь) ===
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam roundcorner 10
+skinparam ArrowColor #666666
+
+' === Стили для элементов C4 (через stereotype) ===
+skinparam rectangle<<person>> {
+    BackgroundColor PERSON_BG_COLOR
+    FontColor #FFFFFF
+}
+skinparam rectangle<<system>> {
+    BackgroundColor SYSTEM_BG_COLOR
+    FontColor #FFFFFF
+}
+skinparam rectangle<<external_system>> {
+    BackgroundColor EXTERNAL_SYSTEM_BG_COLOR
+    FontColor #FFFFFF
+}

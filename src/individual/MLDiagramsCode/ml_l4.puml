@@ -1,6 +1,7 @@
 @startuml "ml_l4.puml"
 ' L4 — диаграмма классов компонента cluster_assigner (Назначение кластера) воркера разметки.
 ' Код прототипа: src/individual/MLCode/cluster_assigner
+!include main.puml
 
 left to right direction
 

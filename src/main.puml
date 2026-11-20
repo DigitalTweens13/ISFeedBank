@@ -1,0 +1,10 @@
+' src/main.puml
+' Единая точка входа для общих определений.
+' Подключается во всех диаграммах через !include.
+
+!include styles.puml
+!include glossary.puml
+
+' Когда появятся новые общие библиотеки — добавляйте сюда, например:
+' !include lib/macros.puml
+' !include lib/colors.puml
