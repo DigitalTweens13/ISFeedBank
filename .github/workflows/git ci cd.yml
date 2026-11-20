@@ -1,0 +1,165 @@
+# .github/workflows/render-diagrams.yml
+#
+# Назначение:
+#   Автоматический рендеринг PlantUML-диаграмм C4 в PNG при пуше в любую ветку,
+#   а также по ручному запуску из интерфейса GitHub Actions.
+#
+# Логика:
+#   - При пуше в feature-ветку рендерятся только новые/изменённые .puml-файлы
+#     и результат коммитится обратно в ту же ветку. Дополнительных прав на обход
+#     защиты веток не требуется, так как коммит идёт не в защищённую main.
+#   - При ручном запуске можно отрендерить все .puml-файлы ветки или только
+#     изменённые в последнем коммите.
+#   - При pull_request в main выполняется только валидация синтаксиса
+#     (рендер без коммита).
+#
+# Структура вывода:
+#   - src/*.puml                       -> docs/images/auto_ci_images/
+#   - src/individual/<user>/**/*.puml  -> docs/images/auto_ci_images/individual/<user>/...
+
+name: Auto Render C4 Architecture Docs
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      render_all:
+        description: 'Отрендерить ВСЕ .puml (а не только изменённые)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+# Права на запись содержимого необходимы для git push в feature-ветку.
+# Для protected main эти права не дают обхода правил защиты.
+permissions:
+  contents: write
+
+jobs:
+  validate-and-render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          # Полная история нужна для git diff с github.event.before
+          fetch-depth: 0
+
+      - name: Setup Java Environment
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Install Graphviz Engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Download PlantUML Jar Executable
+        run: |
+          wget -q https://github.com/plantuml/plantuml/releases/download/v1.2023.10/plantuml-1.2023.10.jar -O plantuml.jar
+
+      # Определение списка .puml-файлов для рендеринга.
+      # Результат доступен последующим шагам через steps.changed.outputs.files.
+      - name: Detect .puml files to render
+        id: changed
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+             [ "${{ github.event.inputs.render_all }}" != "false" ]; then
+            # Ручной запуск: рендерим все .puml в ветке
+            echo "Manual run: rendering ALL .puml files."
+            FILES=$(git ls-files '*.puml')
+
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Ручной запуск: только изменённые в последнем коммите
+            echo "Manual run: rendering only changed .puml files."
+            FILES=$(git diff --name-only --diff-filter=ACMR HEAD~1 HEAD -- '*.puml' || true)
+
+          elif [ "${{ github.event_name }}" = "push" ] && \
+               [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # Первый пуш в новую ветку: сравнивать не с чем, рендерим все
+            echo "First push to branch: rendering ALL .puml files."
+            FILES=$(git ls-files '*.puml')
+
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # Обычный пуш: только новые/изменённые/переименованные
+            FILES=$(git diff --name-only --diff-filter=ACMR \
+              ${{ github.event.before }} ${{ github.sha }} -- '*.puml')
+
+          else
+            # pull_request: изменения относительно базовой ветки
+            FILES=$(git diff --name-only --diff-filter=ACMR \
+              origin/${{ github.base_ref }}...HEAD -- '*.puml' || true)
+          fi
+
+          # Нормализация списка: одна строка, разделитель — пробел
+          FILES=$(echo "$FILES" | tr '\n' ' ' | xargs)
+
+          if [ -z "$FILES" ]; then
+            echo "No .puml files to render."
+            echo "files=" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Files to render: $FILES"
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      # Рендеринг выбранных файлов с сохранением структуры каталогов.
+      # Шаг пропускается, если изменений нет.
+      - name: Validate Syntax and Compile Diagrams to PNG
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          set -euo pipefail
+
+          OUT_ROOT="$(pwd)/docs/images/auto_ci_images"
+          mkdir -p "$OUT_ROOT"
+
+          for f in ${{ steps.changed.outputs.files }}; do
+            # Файлы вне src/ игнорируются
+            case "$f" in
+              src/*) ;;
+              *) echo "Skip (not under src/): $f"; continue ;;
+            esac
+
+            if [[ "$f" == src/individual/* ]]; then
+              # Индивидуальные диаграммы: сохраняем <user>/<...> структуру
+              rel="${f#src/individual/}"
+              subdir="$(dirname "$rel")"
+              outdir="$OUT_ROOT/individual/$subdir"
+              mkdir -p "$outdir"
+              echo "Rendering (individual): $f -> $outdir"
+              java -jar plantuml.jar -verbose -png -o "$outdir" "$f"
+            else
+              # Общие диаграммы: плоско в OUT_ROOT
+              echo "Rendering (common): $f -> $OUT_ROOT"
+              java -jar plantuml.jar -verbose -png -o "$OUT_ROOT" "$f"
+            fi
+          done
+
+      # Коммит и пуш выполняются только при push-событии.
+      # При pull_request результат рендеринга не коммитится — только валидация.
+      # Проверка git diff --cached --quiet защищает от падения при отсутствии изменений.
+      - name: Commit and Push Rendered Artifacts
+        if: github.event_name == 'push' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          git config --global user.name 'DevOps Bot'
+          git config --global user.email 'devops@stankin.ru'
+
+          git add docs/images/auto_ci_images
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m 'docs: auto-update architecture diagrams [skip ci]'
+            git push
+          fi
