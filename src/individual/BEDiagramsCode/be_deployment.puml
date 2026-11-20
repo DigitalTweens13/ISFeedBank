@@ -8,49 +8,49 @@
 
 title Диаграмма развёртывания (L2). Фрагмент: Backend API
 
-Deployment_Node(dn_employee_pc, "Рабочее место сотрудника", "Windows / macOS", "Корпоративный компьютер сотрудника банка") {
-    Deployment_Node(dn_browser, "Веб-браузер", "Chrome / Edge", "Исполняет SPA веб-панели") {
-        Container(web_panel, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
+Deployment_Node($ID_DN_EMPLOYEE_PC, "Рабочее место сотрудника", "Windows / macOS", "Корпоративный компьютер сотрудника банка") {
+    Deployment_Node($ID_DN_BROWSER, "Веб-браузер", "Chrome / Edge", "Исполняет SPA веб-панели") {
+        Container($ID_WEB_PANEL, "Веб-панель", "React / TypeScript, SPA", "Дашборд настроений, реестры отзывов и обращений, справочники, отчёты")
     }
 }
-Deployment_Node(dn_phone, "Смартфон сотрудника", "iOS / Android", "Устройство владельца продукта или руководителя направления") {
-    Container(mobile_app, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
+Deployment_Node($ID_DN_PHONE, "Смартфон сотрудника", "iOS / Android", "Устройство владельца продукта или руководителя направления") {
+    Container($ID_MOBILE_APP, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Обращения и эскалации для владельцев продуктов и руководителей, смена статусов вне рабочего места")
 }
-Deployment_Node(dn_dmz, "Периметр банка (DMZ)", "Межсетевой экран, VLAN DMZ", "Единственная точка входа пользователей в систему") {
-    Deployment_Node(dn_nginx, "Nginx reverse proxy, 2 экземпляра", "Nginx, порт 443, TLS 1.3", "Отдаёт статику SPA, завершает TLS, балансирует запросы к API по least_conn, общий виртуальный адрес keepalived")
+Deployment_Node($ID_DN_DMZ, "Периметр банка (DMZ)", "Межсетевой экран, VLAN DMZ", "Единственная точка входа пользователей в систему") {
+    Deployment_Node($ID_DN_NGINX, "Nginx reverse proxy, 2 экземпляра", "Nginx, порт 443, TLS 1.3", "Отдаёт статику SPA, завершает TLS, балансирует запросы к API по least_conn, общий виртуальный адрес keepalived")
 }
-Deployment_Node(dn_app_zone, "Кластер приложений", "Docker / Kubernetes, VLAN приложений", "Входящие соединения только от Nginx и между приложениями") {
-    Deployment_Node(dn_api, "Под Backend API, 2 реплики", "Docker, Python, uvicorn, порт 8000", "Реплики без состояния: сессия хранится в токене") {
-        Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+Deployment_Node($ID_DN_APP_ZONE, "Кластер приложений", "Docker / Kubernetes, VLAN приложений", "Входящие соединения только от Nginx и между приложениями") {
+    Deployment_Node($ID_DN_API, "Под Backend API, 2 реплики", "Docker, Python, uvicorn, порт 8000", "Реплики без состояния: сессия хранится в токене") {
+        Container($ID_API_BACKEND, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
     }
 }
-Deployment_Node(dn_data_zone, "Зона данных", "VLAN данных", "Доступ только из кластера приложений") {
-    Deployment_Node(dn_db_primary, "Сервер БД, primary", "Linux, PostgreSQL, порт 5432", "Принимает запись и чтение") {
-        ContainerDb(database, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+Deployment_Node($ID_DN_DATA_ZONE, "Зона данных", "VLAN данных", "Доступ только из кластера приложений") {
+    Deployment_Node($ID_DN_DB_PRIMARY, "Сервер БД, primary", "Linux, PostgreSQL, порт 5432", "Принимает запись и чтение") {
+        ContainerDb($ID_DATABASE, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
     }
-    Deployment_Node(dn_db_replica, "Сервер БД, replica", "Linux, PostgreSQL, порт 5432", "Потоковая репликация, автопереключение при отказе primary (Patroni)") {
-        ContainerDb(database_replica, "База данных (реплика)", "PostgreSQL 16", "Горячая копия базы данных: чтение и переключение при отказе primary")
+    Deployment_Node($ID_DN_DB_REPLICA, "Сервер БД, replica", "Linux, PostgreSQL, порт 5432", "Потоковая репликация, автопереключение при отказе primary (Patroni)") {
+        ContainerDb($ID_DATABASE_REPLICA, "База данных (реплика)", "PostgreSQL 16", "Горячая копия базы данных: чтение и переключение при отказе primary")
     }
-    Deployment_Node(dn_redis, "Redis, master и replica", "Redis, порт 6379, Sentinel", "Автоматическое переключение на replica при отказе master") {
-        ContainerDb(cache, "Кэш", "Redis", "Предрассчитанные агрегаты дашборда")
+    Deployment_Node($ID_DN_REDIS, "Redis, master и replica", "Redis, порт 6379, Sentinel", "Автоматическое переключение на replica при отказе master") {
+        ContainerDb($ID_CACHE, "Кэш", "Redis", "Предрассчитанные агрегаты дашборда")
     }
-    Deployment_Node(dn_mq, "Кластер RabbitMQ, 3 узла", "RabbitMQ, порт 5671 (AMQP + TLS), порт 15672 только из сети администрирования", "Очереди quorum: каждое сообщение хранится на большинстве узлов") {
-        Container(message_broker, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+    Deployment_Node($ID_DN_MQ, "Кластер RabbitMQ, 3 узла", "RabbitMQ, порт 5671 (AMQP + TLS), порт 15672 только из сети администрирования", "Очереди quorum: каждое сообщение хранится на большинстве узлов") {
+        Container($ID_MESSAGE_BROKER, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
     }
 }
 
-System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
-System_Ext(reporting_system, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+System_Ext($ID_BANK_IAM, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+System_Ext($ID_REPORTING_SYSTEM, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
 
-Rel(web_panel, dn_nginx, "Загружает статику SPA и вызывает REST API", "HTTPS, TCP 443, TLS 1.3")
-Rel(mobile_app, dn_nginx, "Вызывает REST API", "HTTPS, TCP 443, TLS 1.3")
-Rel(dn_nginx, api_backend, "Передаёт запросы, балансируя между репликами", "HTTP, TCP 8000, внутренняя сеть")
-Rel(web_panel, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
-Rel(mobile_app, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
-Rel(api_backend, bank_iam, "Проверяет подлинность и роли сотрудников", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
-Rel(api_backend, database, "Сохраняет и получает отзывы, обращения, историю статусов и справочники", "SQL, TCP 5432, TLS")
-Rel(api_backend, cache, "Получает и обновляет агрегаты дашборда", "RESP, TCP 6379, TLS")
-Rel(api_backend, message_broker, "Ставит задачи разметки для загруженного пакета отзывов", "AMQP, TCP 5671, TLS")
-Rel(api_backend, reporting_system, "Выгружает отчёты за период", "HTTPS, TCP 443, TLS 1.3 / REST, JSON")
-Rel(database_replica, database, "Получает журнал изменений WAL от primary", "Потоковая репликация PostgreSQL, TCP 5432, TLS")
+Rel($ID_WEB_PANEL, $ID_DN_NGINX, "Загружает статику SPA и вызывает REST API", "HTTPS, TCP 443, TLS 1.3")
+Rel($ID_MOBILE_APP, $ID_DN_NGINX, "Вызывает REST API", "HTTPS, TCP 443, TLS 1.3")
+Rel($ID_DN_NGINX, $ID_API_BACKEND, "Передаёт запросы, балансируя между репликами", "HTTP, TCP 8000, внутренняя сеть")
+Rel($ID_WEB_PANEL, $ID_BANK_IAM, "Перенаправляет пользователя на страницу единого входа", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
+Rel($ID_MOBILE_APP, $ID_BANK_IAM, "Перенаправляет пользователя на страницу единого входа", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
+Rel($ID_API_BACKEND, $ID_BANK_IAM, "Проверяет подлинность и роли сотрудников", "HTTPS, TCP 443, TLS 1.3 / OAuth 2.0 (OIDC)")
+Rel($ID_API_BACKEND, $ID_DATABASE, "Сохраняет и получает отзывы, обращения, историю статусов и справочники", "SQL, TCP 5432, TLS")
+Rel($ID_API_BACKEND, $ID_CACHE, "Получает и обновляет агрегаты дашборда", "RESP, TCP 6379, TLS")
+Rel($ID_API_BACKEND, $ID_MESSAGE_BROKER, "Ставит задачи разметки для загруженного пакета отзывов", "AMQP, TCP 5671, TLS")
+Rel($ID_API_BACKEND, $ID_REPORTING_SYSTEM, "Выгружает отчёты за период", "HTTPS, TCP 443, TLS 1.3 / REST, JSON")
+Rel($ID_DATABASE_REPLICA, $ID_DATABASE, "Получает журнал изменений WAL от primary", "Потоковая репликация PostgreSQL, TCP 5432, TLS")
 @enduml

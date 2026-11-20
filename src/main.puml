@@ -3,7 +3,7 @@
 ' Подключается во всех диаграммах через !include.
 
 !include styles.puml
-' !include glossary.puml
+!include glossary.puml
 
 ' Когда появятся новые общие библиотеки — добавляйте сюда, например:
 ' !include lib/macros.puml
