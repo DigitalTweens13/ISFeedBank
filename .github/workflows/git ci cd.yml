@@ -16,6 +16,9 @@
 #     критические ошибки (Rel_*, отсутствие @startuml/@enduml) роняют job,
 #     предупреждения (skinparam, Rel() без протокола) выводятся в Annotations
 #     и Summary, но рендер продолжается.
+#   - Дополнительно проверяется использование глоссария: в L0/L1/L2/deployment/
+#     dynamic алиасы элементов должны быть переменными $ID_... из glossary.puml.
+#     Несовпадения выводятся как предупреждения, рендер продолжается.
 #
 # Структура вывода:
 #   - src/*.puml                       -> docs/images/auto_ci_images/
@@ -127,17 +130,13 @@ jobs:
         run: |
           python scripts/check_puml_rules.py
 
-        - name: Check .puml styling rules
-        if: steps.changed.outputs.has_changes == 'true'
-        run: |
-          python scripts/check_puml_rules.py
-
+      # Проверка использования глоссария в L0/L1/L2/deployment/dynamic.
+      # Алиасы элементов должны быть переменными $ID_... из glossary.puml.
+      # Предупреждения выводятся в Annotations, рендер продолжается.
       - name: Check glossary usage in L0/L1/L2/deployment/dynamic
         if: steps.changed.outputs.has_changes == 'true'
         run: |
           python scripts/check_glossary_usage.py
-
-      # ... далее Download PlantUML и рендеринг как раньше ...
 
       # Рендеринг выбранных файлов с сохранением структуры каталогов.
       # Шаг пропускается, если изменений нет.
