@@ -1,85 +1,80 @@
-name: Auto Render C4 Architecture Docs
+name: Render PlantUML Diagrams
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - '**'   # любая ветка
 
 permissions:
-  contents: write
+  contents: write   # Даем право на push
 
 jobs:
-  validate-and-render:
+  render:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository code
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Java Environment
-        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '11'
+          fetch-depth: 0   # Нужно для сравнения с предыдущим коммитом
 
-      - name: Install Graphviz Engine
+      - name: Setup Java
+        uses: actions/setup-java@v5   # Убираем deprecated-предупреждение
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Настраиваем пользователя git
+      - name: Configure Git
         run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Download PlantUML Jar Executable
+      # Находим новые/изменённые .puml относительно предыдущего коммита
+      - name: Detect changed .puml files
+        id: changed
         run: |
-          wget -q https://github.com/plantuml/plantuml/releases/download/v1.2023.10/plantuml-1.2023.10.jar -O plantuml.jar
-
-      - name: Validate Syntax and Compile Diagrams to PNG
-        run: |
-          set -euo pipefail
-          shopt -s globstar nullglob
-
-          OUT_ROOT="$(pwd)/docs/images/auto_ci_images"
-          mkdir -p "$OUT_ROOT"
-
-          # --- 1. Общие диаграммы: только файлы прямо в src/ (без подпапок) ---
-          common_files=(src/*.puml)
-          if [ ${#common_files[@]} -gt 0 ]; then
-            echo "== Rendering common diagrams (${#common_files[@]}) =="
-            java -jar plantuml.jar -verbose -png -o "$OUT_ROOT" "${common_files[@]}"
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # Первый пуш в ветку — сравнивать не с чем, берём все .puml
+            FILES=$(git ls-files '*.puml')
           else
-            echo "== No common .puml files in src/ =="
+            FILES=$(git diff --name-only --diff-filter=ACMR \
+              ${{ github.event.before }} ${{ github.sha }} -- '*.puml')
           fi
 
-          # --- 2. Индивидуальные диаграммы: src/individual/<user>/**/*.puml ---
-          # Сохраняем структуру: docs/images/auto_ci_images/individual/<user>/...
-          individual_files=(src/individual/**/*.puml)
-          if [ ${#individual_files[@]} -gt 0 ]; then
-            echo "== Rendering individual diagrams (${#individual_files[@]}) =="
-            for f in "${individual_files[@]}"; do
-              # путь относительно src/individual/, например alice/foo.puml
-              rel="${f#src/individual/}"
-              subdir="$(dirname "$rel")"          # alice  (или alice/sub при вложенности)
-              outdir="$OUT_ROOT/individual/$subdir"
-              mkdir -p "$outdir"
-              java -jar plantuml.jar -verbose -png -o "$outdir" "$f"
-            done
+          # Убираем пустые строки и собираем в одну строку через пробел
+          FILES=$(echo "$FILES" | tr '\n' ' ' | xargs)
+
+          if [ -z "$FILES" ]; then
+            echo "No .puml changes detected."
+            echo "files=" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            echo "== No individual .puml files under src/individual/ =="
+            echo "Changed .puml files: $FILES"
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
-          # Если вообще ничего не нашли — падаем, чтобы не «зелёный» пустой прогон
-          if [ ${#common_files[@]} -eq 0 ] && [ ${#individual_files[@]} -eq 0 ]; then
-            echo "ERROR: No .puml files found at all"
-            exit 1
-          fi
+      # Рендерим только изменённые .puml
+      - name: Render changed diagrams
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          mkdir -p rendered
+          for f in ${{ steps.changed.outputs.files }}; do
+            echo "Rendering $f"
+            # -tsvg можно заменить на -tpng, если нужен PNG
+            java -jar plantuml.jar -tsvg -o "$(pwd)/rendered" "$f" \
+              || { echo "Failed to render $f"; exit 1; }
+          done
 
+      # Коммитим только если реально есть изменения
       - name: Commit and Push Rendered Artifacts
-        if: github.event_name == 'push'
+        if: steps.changed.outputs.has_changes == 'true'
         run: |
-          git config --global user.name 'DevOps Bot'
-          git config --global user.email 'devops@stankin.ru'
-          git add docs/images/auto_ci_images
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m 'docs: auto-update architecture diagrams [skip ci]'
-            git push
+          git add rendered
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+            exit 0
           fi
+          git commit -m "chore: render diagrams for ${{ github.sha }}"
+          git push
