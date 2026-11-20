@@ -3,7 +3,18 @@ name: Render PlantUML Diagrams
 on:
   push:
     branches:
-      - '**'   # любая ветка
+      - '**'   # Любая ветка
+
+  workflow_dispatch:   # Кнопка "Run workflow" вручную
+    inputs:
+      render_all:
+        description: 'Отрендерить ВСЕ .puml (а не только изменённые)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: write   # Даем право на push
