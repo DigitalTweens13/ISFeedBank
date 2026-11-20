@@ -1,0 +1,4 @@
+@startuml "cicd_test.puml"
+title Диаграмма тестирования CI/CD
+
+System(happy_system, "Оно работает", "Ура!")
