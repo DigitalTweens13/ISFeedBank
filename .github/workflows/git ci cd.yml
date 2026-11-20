@@ -127,6 +127,18 @@ jobs:
         run: |
           python scripts/check_puml_rules.py
 
+        - name: Check .puml styling rules
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          python scripts/check_puml_rules.py
+
+      - name: Check glossary usage in L0/L1/L2/deployment/dynamic
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          python scripts/check_glossary_usage.py
+
+      # ... далее Download PlantUML и рендеринг как раньше ...
+
       # Рендеринг выбранных файлов с сохранением структуры каталогов.
       # Шаг пропускается, если изменений нет.
       - name: Validate Syntax and Compile Diagrams to PNG
