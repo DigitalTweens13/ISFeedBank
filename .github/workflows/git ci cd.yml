@@ -1,0 +1,85 @@
+name: Auto Render C4 Architecture Docs
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Java Environment
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Install Graphviz Engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Download PlantUML Jar Executable
+        run: |
+          wget -q https://github.com/plantuml/plantuml/releases/download/v1.2023.10/plantuml-1.2023.10.jar -O plantuml.jar
+
+      - name: Validate Syntax and Compile Diagrams to PNG
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+
+          OUT_ROOT="$(pwd)/docs/images/auto_ci_images"
+          mkdir -p "$OUT_ROOT"
+
+          # --- 1. Общие диаграммы: только файлы прямо в src/ (без подпапок) ---
+          common_files=(src/*.puml)
+          if [ ${#common_files[@]} -gt 0 ]; then
+            echo "== Rendering common diagrams (${#common_files[@]}) =="
+            java -jar plantuml.jar -verbose -png -o "$OUT_ROOT" "${common_files[@]}"
+          else
+            echo "== No common .puml files in src/ =="
+          fi
+
+          # --- 2. Индивидуальные диаграммы: src/individual/<user>/**/*.puml ---
+          # Сохраняем структуру: docs/images/auto_ci_images/individual/<user>/...
+          individual_files=(src/individual/**/*.puml)
+          if [ ${#individual_files[@]} -gt 0 ]; then
+            echo "== Rendering individual diagrams (${#individual_files[@]}) =="
+            for f in "${individual_files[@]}"; do
+              # путь относительно src/individual/, например alice/foo.puml
+              rel="${f#src/individual/}"
+              subdir="$(dirname "$rel")"          # alice  (или alice/sub при вложенности)
+              outdir="$OUT_ROOT/individual/$subdir"
+              mkdir -p "$outdir"
+              java -jar plantuml.jar -verbose -png -o "$outdir" "$f"
+            done
+          else
+            echo "== No individual .puml files under src/individual/ =="
+          fi
+
+          # Если вообще ничего не нашли — падаем, чтобы не «зелёный» пустой прогон
+          if [ ${#common_files[@]} -eq 0 ] && [ ${#individual_files[@]} -eq 0 ]; then
+            echo "ERROR: No .puml files found at all"
+            exit 1
+          fi
+
+      - name: Commit and Push Rendered Artifacts
+        if: github.event_name == 'push'
+        run: |
+          git config --global user.name 'DevOps Bot'
+          git config --global user.email 'devops@stankin.ru'
+          git add docs/images/auto_ci_images
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m 'docs: auto-update architecture diagrams [skip ci]'
+            git push
+          fi
