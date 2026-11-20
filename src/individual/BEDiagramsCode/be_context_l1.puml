@@ -1,6 +1,7 @@
 @startuml "be_context_l1.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
- 
+!include ../../main.puml
+
 ' Индивидуальная версия: BE, запросы через API. Глоссарий ID и правила: см. context_l1.puml тимлида
  
 title Диаграмма системного контекста (L1) ИС управления обратной связью клиентов банка. Фокус: операции пользователей, доступ и отчётность

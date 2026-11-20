@@ -1,5 +1,6 @@
 @startuml
 !include <C4/C4_Component>
+!include main.puml
 
 title L3 — Воркер разметки (BERT, своё обучение)
 

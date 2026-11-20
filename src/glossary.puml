@@ -1,0 +1,75 @@
+' src/glossary.puml
+' Единый глоссарий ID для всех C4-диаграмм проекта ISFeedBank.
+' Подключается через main.puml, в файлах студентов !include не нужен.
+'
+' ПРАВИЛА:
+'   - Новые ID добавляются только через тимлида.
+'   - ID не переименовываются: переименование ломает все диаграммы.
+'   - Переменная объявляется один раз; повторное объявление — ошибка.
+'   - Файл НЕ содержит @startuml/@enduml.
+'
+' ЧТО ЗДЕСЬ НЕ ХРАНИТСЯ И ПОЧЕМУ:
+'   - L3-компоненты (bg_*, lw_*, mob_*, web_*, api_*_comp): встречаются
+'     в одном-двух файлах каждый, не пересекаются между диаграммами разных
+'     участников. Объявляются локально в соответствующем файле.
+'   - L4-классы (CaseEventConsumer, SlaCalculator, ...): это имена классов
+'     на диаграмме классов, а не ID элементов C4.
+
+' ============================================================
+' ПЕРСОНЫ (Person)
+' ============================================================
+!$ID_CX_ANALYST        = "cx_analyst"
+!$ID_PRODUCT_OWNER     = "product_owner"
+!$ID_HEAD_OF_DIRECTION = "head_of_direction"
+!$ID_ADMIN             = "admin"
+
+' ============================================================
+' ЦЕЛЕВАЯ СИСТЕМА (System)
+' ============================================================
+!$ID_FEEDBACK_SYSTEM = "feedback_system"
+
+' ============================================================
+' КОНТЕЙНЕРЫ (Container / ContainerDb)
+' ============================================================
+!$ID_WEB_PANEL         = "web_panel"
+!$ID_MOBILE_APP        = "mobile_app"
+!$ID_API_BACKEND       = "api_backend"
+!$ID_LABELING_WORKER   = "labeling_worker"
+!$ID_BACKGROUND_WORKER = "background_worker"
+!$ID_MESSAGE_BROKER    = "message_broker"
+!$ID_DATABASE          = "database"
+!$ID_CACHE             = "cache"
+
+' ============================================================
+' ВНЕШНИЕ СИСТЕМЫ (System_Ext)
+' ============================================================
+!$ID_REVIEW_SOURCE    = "review_source"
+!$ID_LLM_SERVICE      = "llm_service"
+!$ID_NOTIFY_SERVICE   = "notify_service"
+!$ID_REPORTING_SYSTEM = "reporting_system"
+!$ID_BANK_IAM         = "bank_iam"
+
+' ============================================================
+' УЗЛЫ РАЗВЁРТЫВАНИЯ (Deployment_Node, dn_*)
+' Используются только в deployment_l2.puml и его фрагментах.
+' ============================================================
+!$ID_DN_EMPLOYEE_PC = "dn_employee_pc"
+!$ID_DN_BROWSER     = "dn_browser"
+!$ID_DN_PHONE       = "dn_phone"
+!$ID_DN_DMZ         = "dn_dmz"
+!$ID_DN_NGINX       = "dn_nginx"
+!$ID_DN_APP_ZONE    = "dn_app_zone"
+!$ID_DN_API         = "dn_api"
+!$ID_DN_LABELING    = "dn_labeling"
+!$ID_DN_BG          = "dn_bg"
+!$ID_DN_DATA_ZONE   = "dn_data_zone"
+!$ID_DN_DB_PRIMARY  = "dn_db_primary"
+!$ID_DN_DB_REPLICA  = "dn_db_replica"
+!$ID_DN_REDIS       = "dn_redis"
+!$ID_DN_MQ          = "dn_mq"
+
+' ============================================================
+' КОНТЕЙНЕР РАЗВЁРТЫВАНИЯ (ContainerDb)
+' Существует только на deployment_l2.puml как горячая копия БД.
+' ============================================================
+!$ID_DATABASE_REPLICA = "database_replica"

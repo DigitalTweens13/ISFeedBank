@@ -1,5 +1,6 @@
 @startuml "be_dynamic.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: BE, Backend API. Глоссарий ID и правила: см. context_l1.puml тимлида
 ' Нумерация шагов сквозная и совпадает с общей диаграммой dynamic_process.puml.

@@ -19,7 +19,11 @@ INDIVIDUAL_DIR = Path("src/individual")
 
 FORBIDDEN_REL_PATTERN = re.compile(r'\bRel_[DULR]\s*\(')
 SKINPARAM_PATTERN = re.compile(r'^\s*skinparam\b', re.IGNORECASE)
-REL_PATTERN = re.compile(r'\bRel\s*\(([^)]*)\)')
+REL_PATTERN = re.compile(
+    r'\bRel\s*\(\s*'
+    r'((?:[^()"\']|"[^"]*"|\'[^\']*\')*)'
+    r'\s*\)'
+)
 ANNOTATION_RE = re.compile(r'^(.+?):(\d+): (.+)$')
 
 

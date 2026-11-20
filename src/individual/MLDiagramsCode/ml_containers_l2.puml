@@ -1,5 +1,6 @@
 @startuml "ml_containers_l2.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: ML, воркер разметки. Глоссарий ID и правила: см. context_l1.puml тимлида
 

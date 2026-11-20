@@ -1,5 +1,6 @@
 @startuml "bg_l3.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: TL, воркер фоновых задач. Глоссарий ID и правила: см. context_l1.puml тимлида
 ' ID компонентов: docs/glossary/components.csv (строки bg_*). Новых ID нет.

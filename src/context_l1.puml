@@ -1,5 +1,6 @@
 @startuml "context_l1.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include main.puml
 
 ' ============================================================
 ' ГЛОССАРИЙ ID (единый для всей команды, менять только через ТЛ)

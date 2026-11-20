@@ -1,5 +1,6 @@
 @startuml "landscape_l0.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include main.puml
 
 ' ГЛОССАРИЙ ID: см. context_l1.puml тимлида (единый для всей команды, менять только через ТЛ)
 ' Правила: только Rel(); без Rel_D/R/L/U; описания элементов дословно из общих диаграмм.

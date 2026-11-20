@@ -1,5 +1,6 @@
 @startuml "ml_deployment.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: ML, воркер разметки. Глоссарий ID и правила: см. context_l1.puml тимлида
 ' ID узлов dn_* и контейнера database_replica относятся только к диаграмме развёртывания (ЛР № 4).

@@ -1,5 +1,6 @@
 @startuml "containers_l2.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include main.puml
 
 ' ============================================================
 ' ГЛОССАРИЙ ID (единый для всей команды, менять только через ТЛ)

@@ -1,5 +1,6 @@
 @startuml "da_context_l1.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include ../../main.puml
 
 ' Индивидуальная версия: DA, кто и какие данные получает. Глоссарий ID и правила: см. context_l1.puml тимлида
 

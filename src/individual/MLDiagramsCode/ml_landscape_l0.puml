@@ -1,5 +1,6 @@
 @startuml "ml_landscape_l0.puml"
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include main.puml
 
 ' Индивидуальная версия: ML, воркер разметки. Глоссарий ID и правила: см. context_l1.puml тимлида
 ' Фокус: labeling_worker. Показаны только соседи фокуса и их окружение в ИТ-контуре банка; каждая связь взята из общей диаграммы L2 без изменений.
