@@ -8,7 +8,7 @@
 title Диаграмма системного ландшафта (L0) ИС управления обратной связью клиентов банка. Фокус: брокер сообщений
 
 
-Enterprise_Boundary(bank_it, "ИТ-контур банка") {
+Enterprise_Boundary($ID_BANK_FRAME, "ИТ-контур банка") {
     System_Boundary($ID_FEEDBACK_SYSTEM, "ИС управления обратной связью клиентов банка") {
         Container($ID_MESSAGE_BROKER, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
         Container($ID_API_BACKEND, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
