@@ -1,0 +1,56 @@
+@startuml "da_components_l3.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!include ../../main.puml
+
+' Индивидуальная версия: L3, контейнер «Веб-панель». Глоссарий ID и правила: см. context_l1.puml тимлида
+' Слои: представление (*_view, cases_board) -> прикладной (web_router, web_query) -> инфраструктура (web_api_client, web_session)
+' Вход по схеме BFF (IETF «OAuth 2.0 for Browser-Based Applications»): код на токены обменивает Backend API,
+' браузер получает только HttpOnly-cookie сессии, токены в веб-панель не попадают
+' Связи внутри контейнера: вызовы функций в одном процессе браузера, сетевые протоколы только у связей наружу
+ 
+title Диаграмма компонентов (L3) ИС управления обратной связью клиентов банка. Контейнер: Веб-панель
+ 
+Person(cx_analyst, "Аналитик клиентского опыта", "Загружает отзывы, анализирует настроения клиентов, формирует отчёты")
+Person(product_owner, "Владелец продукта", "Отвечает за обращения по своему продуктовому направлению: ипотека, карты, приложение, отделения")
+Person(admin, "Администратор системы", "Ведёт справочники тем, владельцев и нормативных сроков")
+ 
+System_Ext(bank_iam, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+Container(api_backend, "Backend API", "Python / FastAPI, JWT", "REST API, проверка доступа, статусная модель обращений, назначение владельцев, отчёты")
+ 
+Container_Boundary(web_panel, "Веб-панель") {
+    Component(web_analytics_view, "Экран аналитики", "React, ECharts", "Дашборд долей тональности и динамики настроений по темам, отчёт за период")
+    Component(web_upload_view, "Экран загрузки пакета", "React, Papa Parse", "Разбор файла выгрузки в браузере, проверка формата пакета, отображение статуса обработки")
+    Component(web_cases_board, "Доска обращений", "React", "Обращения направления по статусам, взятие в работу, смена статуса с причиной отклонения")
+    Component(web_dictionaries_view, "Экран справочников", "React", "Справочники тем, владельцев продуктов и нормативных сроков реакции")
+    Component(web_router, "Маршрутизатор", "React Router", "Маршруты экранов и доступ к ним по ролям сотрудника")
+    Component(web_query, "Слой серверного состояния", "TanStack Query", "Кэш ответов API, повтор запросов, опрос статуса пакета, сброс кэша после изменений")
+    Component(web_api_client, "Клиент Backend API", "TypeScript, типы из OpenAPI", "Типизированные методы REST API, cookie сессии и CSRF-заголовок, обработка ошибок")
+    Component(web_session, "Модуль сессии", "TypeScript, BFF-сессия (HttpOnly cookie)", "Запуск входа через единый вход банка, профиль и роли текущей сессии, выход")
+}
+ 
+Rel(cx_analyst, web_upload_view, "Загружает пакет отзывов", "HTTPS")
+Rel(cx_analyst, web_analytics_view, "Изучает дашборд и формирует отчёты", "HTTPS")
+Rel(product_owner, web_cases_board, "Берёт обращения в работу на доске", "HTTPS")
+Rel(admin, web_dictionaries_view, "Настраивает справочники тем, владельцев и сроков", "HTTPS")
+ 
+Rel(web_router, web_session, "Проверяет сессию и роль пользователя перед открытием экрана", "вызов функции TypeScript")
+Rel(web_router, web_analytics_view, "Открывает аналитику для аналитика клиентского опыта", "вызов функции TypeScript")
+Rel(web_router, web_upload_view, "Открывает загрузку пакета для аналитика клиентского опыта", "вызов функции TypeScript")
+Rel(web_router, web_cases_board, "Открывает доску обращений для владельца продукта", "вызов функции TypeScript")
+Rel(web_router, web_dictionaries_view, "Открывает справочники для администратора", "вызов функции TypeScript")
+ 
+Rel(web_analytics_view, web_query, "Получает агрегаты дашборда и отчёт за период", "вызов функции TypeScript")
+Rel(web_upload_view, web_query, "Передаёт проверенный пакет и опрашивает статус его обработки", "вызов функции TypeScript")
+Rel(web_cases_board, web_query, "Получает обращения направления, передаёт взятие в работу и смену статуса", "вызов функции TypeScript")
+Rel(web_dictionaries_view, web_query, "Получает и сохраняет записи справочников", "вызов функции TypeScript")
+Rel(web_query, web_api_client, "Выполняет запросы и изменения через методы REST API", "вызов функции TypeScript")
+Rel(web_api_client, web_session, "Сообщает об истёкшей сессии для повторного входа", "вызов функции TypeScript")
+ 
+Rel(web_session, bank_iam, "Перенаправляет пользователя на страницу единого входа", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(web_session, api_backend, "Запрашивает профиль и роли текущей сессии", "HTTPS / JSON, REST")
+Rel(web_api_client, api_backend, "Запрашивает дашборд и динамику настроений", "HTTPS / JSON, REST")
+Rel(web_api_client, api_backend, "Отправляет пакет отзывов на загрузку", "HTTPS / JSON, REST")
+Rel(web_api_client, api_backend, "Запрашивает статус обработки пакета", "HTTPS / JSON, REST")
+Rel(web_api_client, api_backend, "Запрашивает и изменяет обращения и справочники", "HTTPS / JSON, REST")
+ 
+@enduml
