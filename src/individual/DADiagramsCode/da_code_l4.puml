@@ -1,0 +1,91 @@
+@startuml "da_l4.puml"
+!include ../../main.puml
+' L4 - диаграмма классов компонента web_upload_view («Экран загрузки пакета») и клиентской валидации web_upload_validation
+' Контейнер: Веб-панель (TypeScript). Код прототипа: src/individual/DACode/src
+' Типы ReviewBatch, BatchReport, BatchStatusDto берутся из контрактов (docs/packages/contracts/typescript/src/api.ts)
+
+left to right direction
+
+title L4 - Загрузка пакета отзывов: разбор файла и проверка до отправки (паттерн «Стратегия»)
+
+class UploadService <<web_upload_view>> {
+  - parser: ParserStrategy
+  - validator: BatchValidator
+  - gateway: UploadGateway
+  + setParserStrategy(strategy: ParserStrategy): void
+  + prepare(content: Uint8Array): ValidationReport
+  + submit(report: ValidationReport): Promise<BatchReport>
+  + checkStatus(batchId: string): Promise<BatchStatusDto>
+}
+
+interface ParserStrategy <<web_upload_parser_strategy>> {
+  + readonly name: string
+  + parse(content: Uint8Array): RawRow[]
+}
+
+class CsvParser {
+  + parse(content: Uint8Array): RawRow[]
+}
+
+class JsonParser {
+  + parse(content: Uint8Array): RawRow[]
+}
+
+class BatchValidator <<web_upload_validation, context>> {
+  + setStrategy(strategy: ValidationStrategy): void
+  + validate(rows: readonly RawRow[]): ValidationReport
+}
+
+interface ValidationStrategy <<web_upload_validation_strategy>> {
+  + readonly name: string
+  + apply(rows: readonly RawRow[], issues: ValidationIssue[]): RawReview[]
+}
+
+class StrictValidation {
+  + apply(rows: readonly RawRow[], issues: ValidationIssue[]): RawReview[]
+}
+
+class LenientValidation {
+  + apply(rows: readonly RawRow[], issues: ValidationIssue[]): RawReview[]
+}
+
+interface UploadGateway <<web_api_client>> {
+  + uploadBatch(batch: ReviewBatch): Promise<BatchReport>
+  + getBatchStatus(batchId: string): Promise<BatchStatusDto>
+}
+
+class ValidationReport <<readonly>> {
+  + readonly batch: ReviewBatch | null
+  + readonly issues: readonly ValidationIssue[]
+  + isAccepted(): boolean
+}
+
+UploadService *--> "1" ParserStrategy : разбор файла >
+UploadService *--> "1" BatchValidator : проверка до отправки >
+UploadService o--> "1" UploadGateway : POST /feedback/batches,\nGET /review-batches/{id} >
+UploadService ..> ValidationReport : <<create>>
+
+CsvParser ..|> ParserStrategy
+JsonParser ..|> ParserStrategy
+
+BatchValidator *--> "1" ValidationStrategy : правило отбора строк >
+BatchValidator ..> ValidationReport : <<create>>
+StrictValidation ..|> ValidationStrategy
+LenientValidation ..|> ValidationStrategy
+
+note bottom of UploadGateway
+  Типы ReviewBatch, BatchReport, BatchStatusDto:
+  contracts/typescript/src/api.ts.
+  RawRow = Record<string, string>
+end note
+
+note right of StrictValidation
+  хотя бы одна ошибка:
+  пакет отклоняется целиком
+end note
+
+note right of LenientValidation
+  строки с ошибками отбрасываются,
+  остальные принимаются
+end note
+@enduml

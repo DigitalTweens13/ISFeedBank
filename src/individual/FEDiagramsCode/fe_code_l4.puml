@@ -1,0 +1,52 @@
+@startuml "fe_code_l4.puml"
+!include ../../main.puml
+
+title Смена статуса в mob_query (L4)
+ 
+package "Мобильное приложение / mob_query" {
+    class MobQuery {
+        - strategy: StatusChangeStrategy
+        + setStrategy(strategy: StatusChangeStrategy): void
+        + changeStatus(command: ChangeCommand): Promise<SubmitResult>
+        + syncPending(): Promise<DeliveryResult[]>
+    }
+ 
+    interface StatusChangeStrategy {
+        + submit(command: ChangeCommand): Promise<SubmitResult>
+        + syncPending(): Promise<DeliveryResult[]>
+    }
+ 
+    class OfflineStatusChange {
+        - queue: StatusChangeQueue
+        + submit(command: ChangeCommand): Promise<SubmitResult>
+        + syncPending(): Promise<DeliveryResult[]>
+    }
+ 
+    class OnlineStatusChange {
+        - api: CaseStatusPort
+        - queue: StatusChangeQueue
+        + submit(command: ChangeCommand): Promise<DeliveryResult>
+        + syncPending(): Promise<DeliveryResult[]>
+    }
+ 
+    class StatusChangeQueue {
+        - pending: ChangeCommand[]
+        - activeReplay: Promise<DeliveryResult[]> | undefined
+        + enqueue(command: ChangeCommand): void
+        + size: number {readOnly}
+        + replay(deliver: StatusDelivery): Promise<DeliveryResult[]>
+    }
+ 
+    interface CaseStatusPort {
+        + patchStatus(command: ChangeCommand): Promise<PatchResult>
+        + getCase(caseId: CaseId): Promise<CaseDetailsDto>
+    }
+ 
+    MobQuery --> "1" StatusChangeStrategy : активная стратегия
+    StatusChangeStrategy <|.. OfflineStatusChange
+    StatusChangeStrategy <|.. OnlineStatusChange
+    OfflineStatusChange --> "1" StatusChangeQueue : добавляет команду
+    OnlineStatusChange --> "1" StatusChangeQueue : отправляет очередь
+    OnlineStatusChange --> "1" CaseStatusPort : вызывает API
+}
+@enduml
