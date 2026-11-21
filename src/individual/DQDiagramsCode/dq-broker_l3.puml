@@ -1,0 +1,29 @@
+@startuml "student_dq-broker.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title L3 — Брокер сообщений (RabbitMQ)
+
+Container(api_backend, "Backend API", "Python / FastAPI, JWT")
+Container(labeling_worker, "Воркер разметки", "Python / Celery")
+Container(background_worker, "Воркер фоновых задач", "Python / Celery beat")
+
+Container_Boundary(message_broker, "Message Broker (RabbitMQ)") {
+    Component(connection_handler, "Обработчик AMQP-соединений", "RabbitMQ Connections")
+    Component(exchange_manager, "Маршрутизатор сообщений", "RabbitMQ Exchanges")
+    Component(queue_labeling, "Очередь задач разметки reviews.labeling", "RabbitMQ Queue")
+    Component(queue_cases, "Очередь событий обращений cases.events", "RabbitMQ Queue")
+}
+
+Rel(api_backend, connection_handler, "1. Публикует задачи разметки для принятого пакета", "AMQP")
+Rel(background_worker, connection_handler, "2. Публикует задачи разметки для собранных отзывов", "AMQP")
+Rel(connection_handler, exchange_manager, "3. Передаёт принятую задачу на маршрутизацию", "Python Call")
+Rel(exchange_manager, queue_labeling, "4. Направляет задачу в reviews.labeling", "Python Call")
+Rel(labeling_worker, connection_handler, "5. Забирает задачи разметки из reviews.labeling", "AMQP")
+Rel(connection_handler, queue_labeling, "6. Извлекает задачу для потребителя", "Python Call")
+
+Rel(labeling_worker, connection_handler, "7. Публикует событие «обращение создано»", "AMQP")
+Rel(connection_handler, exchange_manager, "8. Передаёт принятое событие на маршрутизацию", "Python Call")
+Rel(exchange_manager, queue_cases, "9. Направляет событие в cases.events", "Python Call")
+Rel(background_worker, connection_handler, "10. Забирает события из cases.events", "AMQP")
+Rel(connection_handler, queue_cases, "11. Извлекает событие для потребителя", "Python Call")
+@enduml
