@@ -1,0 +1,103 @@
+@startuml
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title L3 — Backend API (Python / FastAPI)
+
+LAYOUT_TOP_DOWN()
+
+skinparam linetype spline
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+' Внешние клиентские приложения
+
+Container(mobile, "Мобильное приложение", "TypeScript / React Native, iOS / Android")
+
+Container(web, "Веб-панель", "React / TypeScript, SPA")
+
+' Компоненты Backend API
+
+Container_Boundary(backend, "Backend API (Python / FastAPI, JWT)") {
+
+    Component(validation, "Приём и валидация отзывов", "Python Service")
+
+    Component(management, "Управление ответами и статусами", "Python Service")
+
+    Component(analytics, "Модуль выдачи аналитики", "Python Service")
+
+    Component(auth, "Модуль авторизации", "FastAPI Router")
+}
+
+' Внешние контейнеры
+
+Container(broker, "Брокер сообщений", "RabbitMQ")
+
+ContainerDb(database, "База данных", "PostgreSQL 16")
+
+ContainerDb(cache, "Кэш", "Redis")
+
+' Внешние системы банка
+
+System_Ext(access, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+
+System_Ext(reporting, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+
+' Авторизация
+
+Rel_D(auth, access, "1. Получает открытые ключи для проверки подписи JWT", "HTTPS / OAuth 2.0 (OIDC)")
+
+Rel_D(auth, access, "2. Получает роли сотрудника для разграничения прав", "HTTPS / OAuth 2.0 (OIDC)")
+
+' Приём и валидация отзывов
+
+Rel_D(web, validation, "3. Отправляет пакет отзывов на загрузку", "HTTPS / JSON, REST")
+
+Rel_D(validation, auth, "4. Проверяет токен и право на загрузку", "Python Call")
+
+Rel(validation, database, "5. Сохраняет принятый пакет отзывов", "SQL / TCP")
+
+Rel(validation, broker, "6. Ставит задачу разметки для принятого пакета", "AMQP")
+
+' Получение аналитики
+
+Rel_D(web, analytics, "7. Запрашивает отзывы, аналитику и справочники", "HTTPS / JSON, REST")
+
+Rel_D(analytics, auth, "8. Проверяет токен и право на просмотр", "Python Call")
+
+Rel(analytics, cache, "9. Получает агрегаты дашборда, при промахе записывает их", "RESP / TCP")
+
+Rel(analytics, database, "10. Получает отзывы, справочники и данные витрин по фильтрам", "SQL / TCP")
+
+Rel(analytics, reporting, "11. Выгружает отчёт за период", "HTTPS / REST, JSON")
+
+' Управление ответами и статусами
+
+Rel_D(web, management, "12. Запрашивает обращения и передаёт смену статуса", "HTTPS / JSON, REST")
+
+Rel_D(mobile, management, "13. Запрашивает обращения и передаёт смену статуса", "HTTPS / JSON, REST")
+
+Rel_D(management, auth, "14. Проверяет токен и роль владельца обращения", "Python Call")
+
+Rel(management, database, "15. Получает обращения по фильтрам", "SQL / TCP")
+
+Rel(management, database, "16. Сохраняет обращение и запись истории статусов в одной транзакции", "SQL / TCP")
+
+' Настройка расположения элементов
+
+Lay_R(mobile, web)
+
+Lay_R(validation, management)
+Lay_R(management, analytics)
+
+Lay_D(management, auth)
+Lay_D(auth, access)
+
+Lay_R(auth, broker)
+Lay_R(broker, database)
+Lay_R(database, reporting)
+Lay_R(reporting, cache)
+
+@enduml
