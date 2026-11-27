@@ -1,6 +1,6 @@
-@startuml
+@startuml "ml_l3.puml"
 !include <C4/C4_Component>
-!include main.puml
+!include ../../main.puml
 
 title L3 — Воркер разметки (BERT, своё обучение)
 
