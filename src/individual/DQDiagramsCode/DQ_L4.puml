@@ -1,43 +1,21 @@
-@startuml
+@startuml "DQ_L4.puml"
+!include ../../main.puml
 
-title Диаграмма классов UML (Level 4) — Очередь задач разметки reviews.labeling (паттерн «Стратегия»)
+' Индивидуальная версия: DQ, брокер сообщений.
+' Детализация очереди задач разметки reviews.labeling.
+' Паттерн проектирования: Стратегия.
+
+title Диаграмма классов UML (L4). Очередь задач разметки reviews.labeling (паттерн «Стратегия»)
 
 top to bottom direction
 
-skinparam backgroundColor white
-skinparam shadowing false
-skinparam classAttributeIconSize 0
-skinparam defaultFontName Arial
-skinparam defaultFontSize 12
-skinparam nodesep 40
-skinparam ranksep 50
-skinparam linetype spline
-
-skinparam class {
-    BackgroundColor #FFFFFF
-    BorderColor #AAAAAA
-    ArrowColor #555555
-    FontColor #000000
-    FontStyle bold
-}
-
-skinparam note {
-    BackgroundColor #FFFFDD
-    BorderColor #AAAAAA
-    FontColor #000000
-}
-
-' ==========================================
 ' Клиент
-' ==========================================
 
 class RabbitExchangeManager <<client>> {
     +plan(message: Message): list[PublishTarget]
 }
 
-' ==========================================
 ' Контекст стратегии
-' ==========================================
 
 class RabbitQueueBase <<context>> {
     -_name: str
@@ -60,9 +38,7 @@ note right of RabbitQueueBase
     код очереди не меняется
 end note
 
-' ==========================================
 ' Очередь задач разметки
-' ==========================================
 
 class RabbitLabelingQueue {
     +DEFAULT_MAX_LENGTH: int = 10000
@@ -73,17 +49,13 @@ class RabbitLabelingQueue {
     max_length: int = 10000)
 }
 
-' ==========================================
 ' Интерфейс стратегии порядка выдачи
-' ==========================================
 
 interface DeliveryOrderStrategy <<interface>> {
     +priority_for(message: Message, max_priority: int): int
 }
 
-' ==========================================
 ' Реализации стратегии порядка выдачи
-' ==========================================
 
 class FifoOrder {
     +priority_for(message: Message, max_priority: int): int
@@ -96,17 +68,13 @@ class PriorityOrder {
     +priority_for(message: Message, max_priority: int): int
 }
 
-' ==========================================
 ' Интерфейс политики приоритизации
-' ==========================================
 
 interface PriorityPolicy <<interface>> {
     +priority_of(message: Message): int
 }
 
-' ==========================================
 ' Реализации политики приоритизации
-' ==========================================
 
 class NegativeReviewsFirstPolicy {
     +priority_of(message: Message): int
@@ -129,58 +97,38 @@ class MessagePriorityPolicy {
     +priority_of(message: Message): int
 }
 
-' ==========================================
 ' Зависимость клиента от контекста
-' ==========================================
 
 RabbitExchangeManager ..> RabbitQueueBase : prepare(message)
 
-' ==========================================
 ' Наследование очереди
-' ==========================================
 
 RabbitQueueBase <|-- RabbitLabelingQueue
 
-' ==========================================
 ' Композиция контекста и стратегии
-' ==========================================
 
 RabbitQueueBase "1" *-- "1" DeliveryOrderStrategy : order
 
-' ==========================================
 ' Реализация стратегий порядка выдачи
-' ==========================================
 
 DeliveryOrderStrategy <|.. FifoOrder
-
 DeliveryOrderStrategy <|.. PriorityOrder
 
-' ==========================================
 ' Композиция стратегии и политики
-' ==========================================
 
 PriorityOrder "1" *-- "1" PriorityPolicy : policy
 
-' ==========================================
 ' Реализация политик приоритизации
-' ==========================================
 
 PriorityPolicy <|.. NegativeReviewsFirstPolicy
-
 PriorityPolicy <|.. SourcePriorityPolicy
-
 PriorityPolicy <|.. MessagePriorityPolicy
 
-' ==========================================
 ' Настройка расположения элементов
-' ==========================================
 
 RabbitLabelingQueue -[hidden]right- DeliveryOrderStrategy
-
 FifoOrder -[hidden]right- PriorityOrder
-
 NegativeReviewsFirstPolicy -[hidden]right- SourcePriorityPolicy
-
 SourcePriorityPolicy -[hidden]right- MessagePriorityPolicy
 
 @enduml
