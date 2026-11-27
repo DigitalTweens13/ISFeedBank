@@ -104,7 +104,7 @@ def check_file(path: Path, is_individual: bool) -> tuple[list[str], list[str]]:
         if is_individual and SKINPARAM_PATTERN.match(stripped):
             warnings.append(
                 f"{path}:{lineno}: skinparam в индивидуальной диаграмме. "
-                f"Стили вынесите в общий файл."
+                f"Наследуйте стили от main.puml/styles.puml."
             )
 
         for m in REL_PATTERN.finditer(line):
