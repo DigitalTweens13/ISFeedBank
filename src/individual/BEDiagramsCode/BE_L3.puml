@@ -1,0 +1,48 @@
+@startuml "be_l3.puml"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!include ../../main.puml
+
+' Индивидуальная версия: BE, Backend API.
+' Глоссарий ID и правила: см. context_l1.puml тимлида.
+' ID компонентов: docs/glossary/components.csv (строки api_*).
+' Новых ID нет.
+
+title Диаграмма компонентов (L3). Backend API
+
+Container($ID_MOBILE_APP, "Мобильное приложение", "TypeScript / React Native, iOS / Android", "Просмотр обращений и изменение их статусов")
+Container($ID_WEB_PANEL, "Веб-панель", "React / TypeScript, SPA", "Загрузка отзывов, просмотр аналитики и управление обращениями")
+Container($ID_MESSAGE_BROKER, "Брокер сообщений", "RabbitMQ", "Очереди reviews.labeling (задачи разметки) и cases.events (события по обращениям)")
+ContainerDb($ID_DATABASE, "База данных", "PostgreSQL 16", "Отзывы, разметка, обращения, история статусов, справочники, витрины аналитики")
+ContainerDb($ID_CACHE, "Кэш", "Redis", "Кэширование агрегатов аналитики")
+
+System_Ext($ID_BANK_IAM, "Система управления доступом банка", "Единый вход и ролевая модель сотрудников банка")
+System_Ext($ID_REPORTING_SYSTEM, "Система отчётности банка", "Корпоративное хранилище управленческой отчётности")
+
+Container_Boundary($ID_API_BACKEND, "Backend API") {
+    Component(api_feedback_ingestion_comp, "Приём и валидация отзывов", "Python Service", "Принимает пакет, проверяет формат, обезличивает, сохраняет и ставит задачи разметки")
+    Component(api_response_management_comp, "Управление ответами и статусами", "Python Service", "Статусная модель, история статусов, назначение владельцев")
+    Component(api_analytics_comp, "Модуль выдачи аналитики", "Python Service", "Дашборд, реестры, справочники и выгрузка отчётов")
+    Component(api_auth_comp, "Модуль авторизации", "FastAPI Router", "Проверяет подпись и срок JWT по ключам IAM, получает роли и определяет доступность операции")
+}
+
+Rel(api_auth_comp, $ID_BANK_IAM, "Получает открытые ключи для проверки подписи JWT", "HTTPS / OAuth 2.0 (OIDC)")
+Rel(api_auth_comp, $ID_BANK_IAM, "Получает роли сотрудника для разграничения прав", "HTTPS / OAuth 2.0 (OIDC)")
+
+Rel($ID_WEB_PANEL, api_feedback_ingestion_comp, "Отправляет пакет отзывов на загрузку", "HTTPS / JSON, REST")
+Rel(api_feedback_ingestion_comp, api_auth_comp, "Проверяет токен и право на загрузку", "Python Call")
+Rel(api_feedback_ingestion_comp, $ID_DATABASE, "Сохраняет принятый пакет отзывов", "SQL / TCP")
+Rel(api_feedback_ingestion_comp, $ID_MESSAGE_BROKER, "Ставит задачи разметки в очередь reviews.labeling", "AMQP")
+
+Rel($ID_WEB_PANEL, api_analytics_comp, "Запрашивает отзывы, аналитику и справочники", "HTTPS / JSON, REST")
+Rel(api_analytics_comp, api_auth_comp, "Проверяет токен и право на просмотр", "Python Call")
+Rel(api_analytics_comp, $ID_CACHE, "Получает агрегаты дашборда, при отсутствии записывает их", "RESP / TCP")
+Rel(api_analytics_comp, $ID_DATABASE, "Получает отзывы, справочники и данные витрин по фильтрам", "SQL / TCP")
+Rel(api_analytics_comp, $ID_REPORTING_SYSTEM, "Выгружает отчёт за период", "HTTPS / REST, JSON")
+
+Rel($ID_WEB_PANEL, api_response_management_comp, "Запрашивает обращения и передаёт смену статуса", "HTTPS / JSON, REST")
+Rel($ID_MOBILE_APP, api_response_management_comp, "Запрашивает обращения и передаёт смену статуса", "HTTPS / JSON, REST")
+Rel(api_response_management_comp, api_auth_comp, "Проверяет токен и роль владельца обращения", "Python Call")
+Rel(api_response_management_comp, $ID_DATABASE, "Получает обращения по фильтрам", "SQL / TCP")
+Rel(api_response_management_comp, $ID_DATABASE, "Сохраняет обращение и запись истории статусов в одной транзакции", "SQL / TCP")
+
+@enduml
