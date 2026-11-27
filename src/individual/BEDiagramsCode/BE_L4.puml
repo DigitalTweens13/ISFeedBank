@@ -1,30 +1,16 @@
-@startuml
-title Диаграмма классов UML (Level 4) — Приём и валидация отзывов (паттерн Стратегия)
+@startuml "BE_L4.puml"
+!include ../../main.puml
 
-top to bottom direction
+' Индивидуальная версия: BE, Backend API.
+' Детализация компонента api_feedback_ingestion_comp.
+' Глоссарий компонентов и классов: docs/glossary/components.csv.
+' Паттерн проектирования: Стратегия.
 
-skinparam backgroundColor white
-skinparam shadowing false
-skinparam classAttributeIconSize 0
-skinparam defaultFontName Arial
-skinparam defaultFontSize 12
-skinparam nodesep 35
-skinparam ranksep 55
-skinparam linetype spline
+title Диаграмма классов UML (L4). Приём и валидация отзывов (паттерн «Стратегия»)
 
-skinparam class {
-    BackgroundColor #FFFFFF
-    BorderColor #333333
-    ArrowColor #333333
-    FontColor #000000
-    FontStyle bold
-}
-
-' ==========================================
 ' Основной сервис
-' ==========================================
 
-class FeedbackIngestionService #FCF5DE {
+class FeedbackIngestionService {
     -guard: AccessGuard
     -repo: FeedbackRepository
     -publisher: MarkupTaskPublisher
@@ -40,21 +26,18 @@ class FeedbackIngestionService #FCF5DE {
     +catalog(): StrategyCatalog
 }
 
-' ==========================================
 ' Модели данных
-' ==========================================
 
-class Feedback #F2F2F2 {
+class Feedback {
     +id: str
     +fingerprint: str
     +text: str (обезличен)
     +rating: int
     +published_at: datetime
     +status: str = NEW
-    --
 }
 
-class BatchReport #F2F2F2 {
+class BatchReport {
     +batch_id: str
     +total: int
     +accepted: int
@@ -66,11 +49,9 @@ class BatchReport #F2F2F2 {
     +as_dict(): dict
 }
 
-' ==========================================
 ' Контейнер стратегий
-' ==========================================
 
-class "StrategySlot<S>" as StrategySlot #F2F2F2 {
+class "StrategySlot<S>" as StrategySlot {
     -kind: str
     -strategies: dict[str, S]
     -active: str
@@ -82,46 +63,40 @@ class "StrategySlot<S>" as StrategySlot #F2F2F2 {
     +describe(): dict
 }
 
-' ==========================================
 ' Интерфейсы внешних зависимостей
-' ==========================================
 
-interface MarkupTaskPublisher <<interface>> #F2F2F2 {
+interface MarkupTaskPublisher <<interface>> {
     +publish(tasks): void
 }
 
-interface FeedbackRepository <<interface>> #F2F2F2 {
+interface FeedbackRepository <<interface>> {
     +existing_fingerprints(fingerprints): set[str]
     +save_batch(feedbacks): void
 }
 
-interface AccessGuard <<interface>> #F2F2F2 {
+interface AccessGuard <<interface>> {
     +authorize(token, operation): Principal
 }
 
-' ==========================================
 ' Интерфейсы стратегий
-' ==========================================
 
-interface BatchParserStrategy <<interface>> #ECF2FD {
+interface BatchParserStrategy <<interface>> {
     +parse(payload): list[dict]
 }
 
-interface ValidationStrategy <<interface>> #ECF2FD {
+interface ValidationStrategy <<interface>> {
     +validate(record): list[Violation]
 }
 
-interface AnonymizationStrategy <<interface>> #ECF2FD {
+interface AnonymizationStrategy <<interface>> {
     +anonymize(text): str
 }
 
-interface DeduplicationStrategy <<interface>> #ECF2FD {
+interface DeduplicationStrategy <<interface>> {
     +fingerprint(record): str
 }
 
-' ==========================================
 ' Стратегии парсинга
-' ==========================================
 
 class JsonBatchParser {
     +parse(payload): list[dict]
@@ -131,9 +106,7 @@ class CsvBatchParser {
     +parse(payload): list[dict]
 }
 
-' ==========================================
 ' Стратегии валидации
-' ==========================================
 
 class RuleChainValidation {
     -rules: list[ValidationRule]
@@ -141,7 +114,7 @@ class RuleChainValidation {
     +validate(record): list[Violation]
 }
 
-interface ValidationRule <<interface>> #ECF2FD {
+interface ValidationRule <<interface>> {
     +check(record): Iterable[Violation]
 }
 
@@ -153,9 +126,7 @@ class FileImportValidation {
     +__init__(now_provider)
 }
 
-' ==========================================
 ' Стратегии обезличивания
-' ==========================================
 
 abstract class _RegexAnonymizer {
     #_replace(kind, matched): str
@@ -174,9 +145,7 @@ class PlaceholderAnonymizer {
     #_replace(kind, matched): str
 }
 
-' ==========================================
 ' Стратегии дедупликации
-' ==========================================
 
 class ContentHashFingerprint {
     +fingerprint(record): str
@@ -188,99 +157,51 @@ class ExternalIdFingerprint {
     +fingerprint(record): str
 }
 
-' ==========================================
 ' Зависимости основного сервиса
-' ==========================================
 
 FeedbackIngestionService ..> Feedback : <<create>>
-
 FeedbackIngestionService ..> BatchReport : <<create>>
 
 FeedbackIngestionService "1" *-- "4" StrategySlot
 
-FeedbackIngestionService ..> MarkupTaskPublisher : связь 6
+FeedbackIngestionService ..> MarkupTaskPublisher : Публикует задачи разметки
+FeedbackIngestionService ..> FeedbackRepository : Сохраняет отзывы
+FeedbackIngestionService ..> AccessGuard : Проверяет права доступа
 
-FeedbackIngestionService ..> FeedbackRepository : связь 5
-
-FeedbackIngestionService ..> AccessGuard : связь 4
-
-' ==========================================
 ' Агрегация стратегий
-' ==========================================
 
 StrategySlot o-- "1..*" BatchParserStrategy
-
 StrategySlot o-- "1..*" ValidationStrategy
-
 StrategySlot o-- "1..*" AnonymizationStrategy
-
 StrategySlot o-- "1..*" DeduplicationStrategy
 
-' ==========================================
 ' Реализация стратегий парсинга
-' ==========================================
 
 BatchParserStrategy <|.. JsonBatchParser
-
 BatchParserStrategy <|.. CsvBatchParser
 
-' ==========================================
 ' Реализация стратегий валидации
-' ==========================================
 
 ValidationStrategy <|.. RuleChainValidation
 
 RuleChainValidation o-- "1..*" ValidationRule
 
 RuleChainValidation <|-- AggregatorValidation
-
 RuleChainValidation <|-- FileImportValidation
 
-' ==========================================
 ' Реализация стратегий обезличивания
-' ==========================================
 
 AnonymizationStrategy <|.. _RegexAnonymizer
-
 AnonymizationStrategy <|.. NoopAnonymizer
 
 _RegexAnonymizer <|-- PartialMaskAnonymizer
-
 _RegexAnonymizer <|-- PlaceholderAnonymizer
 
-' ==========================================
 ' Реализация стратегий дедупликации
-' ==========================================
 
 DeduplicationStrategy <|.. ContentHashFingerprint
-
 DeduplicationStrategy <|.. ExternalIdFingerprint
 
 ExternalIdFingerprint ..> DeduplicationStrategy : fallback 0..1
 
-' ==========================================
-' Настройка расположения элементов
-' ==========================================
-
-Feedback -[hidden]right- BatchReport
-BatchReport -[hidden]right- StrategySlot
-StrategySlot -[hidden]right- MarkupTaskPublisher
-MarkupTaskPublisher -[hidden]right- FeedbackRepository
-FeedbackRepository -[hidden]right- AccessGuard
-
-BatchParserStrategy -[hidden]right- ValidationStrategy
-ValidationStrategy -[hidden]right- AnonymizationStrategy
-AnonymizationStrategy -[hidden]right- DeduplicationStrategy
-
-JsonBatchParser -[hidden]right- CsvBatchParser
-CsvBatchParser -[hidden]right- RuleChainValidation
-RuleChainValidation -[hidden]right- _RegexAnonymizer
-_RegexAnonymizer -[hidden]right- NoopAnonymizer
-NoopAnonymizer -[hidden]right- ContentHashFingerprint
-ContentHashFingerprint -[hidden]right- ExternalIdFingerprint
-
-ValidationRule -[hidden]right- AggregatorValidation
-AggregatorValidation -[hidden]right- FileImportValidation
-FileImportValidation -[hidden]right- PartialMaskAnonymizer
-PartialMaskAnonymizer -[hidden]right- PlaceholderAnonymizer
 @enduml
